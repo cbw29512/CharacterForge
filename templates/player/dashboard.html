@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Player Dashboard — CharacterForge{% endblock %}
+{% block content %}
+<h1>Welcome, {{ session.get('display_name') }}</h1>
+<p class="subtitle">Your adventures across the realms.</p>
+
+{% if campaigns %}
+  <h2 style="margin-top:20px">Your Campaigns</h2>
+  <div class="cards-grid">
+    {% for c in campaigns %}
+    <a href="/campaigns/{{ c.id }}" class="campaign-card">
+      <div class="campaign-card-name">{{ c.name }}</div>
+      <div class="campaign-card-desc">{{ c.description or 'No description.' }}</div>
+      <div class="campaign-card-meta">
+        <span>🎲 DM: {{ c.dm.display_name or c.dm.username if c.dm else '—' }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if pending %}
+  <div class="panel" style="margin-top:24px">
+    <h2>Pending Requests</h2>
+    {% for m in pending %}
+      {% set c = m.campaign %}
+      <div class="flex" style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <span class="pending-dot"></span>
+        <span>{{ c.name if c else '—' }}</span>
+        <span class="text-dim" style="margin-left:auto;font-size:13px">Awaiting DM approval</span>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if not campaigns and not pending %}
+  <div class="panel" style="text-align:center;padding:48px;margin-top:20px">
+    <div style="font-size:48px;margin-bottom:12px">🗡</div>
+    <h2>No Campaigns Yet</h2>
+    <p class="text-dim" style="margin:8px 0 20px">Browse available campaigns and ask to join one.</p>
+    <a href="/player/campaigns/browse" class="btn btn-primary">Browse Campaigns</a>
+  </div>
+{% else %}
+  <div style="margin-top:16px">
+    <a href="/player/campaigns/browse" class="btn btn-secondary btn-sm">Browse More Campaigns</a>
+  </div>
+{% endif %}
+{% endblock %}

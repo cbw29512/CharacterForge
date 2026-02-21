@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.name }} — CharacterForge
+<script>
+async function generateNPC() {
+  const desc = document.getElementById('npc-ai-desc')?.value?.trim();
+  if (!desc) { alert('Enter a description first.'); return; }
+  const status = document.getElementById('npc-ai-status');
+  status.textContent = '⏳ Generating stat block... (this may take 30-60 seconds)';
+
+  try {
+    const res = await fetch('/characters/ai_npc', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({description: desc})
+    });
+    const data = await res.json();
+    if (!data.ok) { status.textContent = '❌ ' + data.error; return; }
+    const npc = data.npc;
+    // Populate form fields
+    const set = (name, val) => {
+      const el = document.querySelector(`#npc-form [name="${name}"]`);
+      if (el && val !== undefined && val !== null) el.value = val;
+    };
+    set('name', npc.name);
+    set('level', npc.level);
+    set('char_class', npc.char_class);
+    set('race', npc.race);
+    set('alignment', npc.alignment);
+    set('strength', npc.strength);
+    set('dexterity', npc.dexterity);
+    set('constitution', npc.constitution);
+    set('intelligence', npc.intelligence);
+    set('wisdom', npc.wisdom);
+    set('charisma', npc.charisma);
+    set('armor_class_override', npc.armor_class);
+    set('hp_override', npc.max_hp);
+    set('speed', npc.speed);
+    set('notes', npc.notes + (npc.reasoning ? '\n\n[AI reasoning: ' + npc.reasoning + ']' : ''));
+    status.textContent = '✅ Stat block generated! Review and submit below.';
+  } catch(e) {
+    status.textContent = '❌ Request failed: ' + e;
+  }
+}
+</script>
+{% endblock %}
+{% block content %}
+
+<div class="flex justify-between" style="margin-bottom:4px;flex-wrap:wrap;gap:12px">
+  <div>
+    <h1>{{ campaign.name }}</h1>
+    {% if campaign.description %}
+      <p class="subtitle">{{ campaign.description }}</p>
+    {% endif %}
+  </div>
+  <div class="flex" style="gap:8px;align-self:flex-start;margin-top:8px">
+    {% if is_dm %}
+      <button class="btn btn-secondary btn-sm" onclick="openModal('modal-add-npc')">+ Quick NPC</button>
+    {% endif %}
+    {% if session.get('role') in ['admin','dm'] %}
+      <a href="/dm/" class="btn btn-ghost btn-sm">← DM Dashboard</a>
+    {% else %}
+      <a href="/player/" class="btn btn-ghost btn-sm">← My Characters</a>
+    {% endif %}
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr {% if is_dm %}300px{% endif %};gap:20px;align-items:start;margin-top:20px">
+
+<!-- Main content -->
+<div>
+
+  <!-- Player Characters -->
+  <div class="panel panel-gold">
+    <h2>Player Characters</h2>
+    {% if pc_chars %}
+      <div class="char-cards-grid">
+        {% for c in pc_chars %}
+        <a href="/characters/{{ c.id }}/sheet" class="char-card">
+          <div class="char-card-header">
+            <div class="char-card-name">{{ c.name }}</div>
+            <div class="char-card-class">{{ c.race or '—' }} {{ c.char_class or '—' }}</div>
+          </div>
+          <div class="char-card-body">
+            <div class="char-stat">
+              <span class="char-stat-label">Level</span>
+              <span class="char-stat-val">{{ c.level }}</span>
+            </div>
+            <div class="char-stat">
+              <span class="char-stat-label">AC</span>
+              <span class="char-stat-val">{{ c.armor_class }}</span>
+            </div>
+            <div class="char-stat" style="grid-column:span 2">
+              <div class="hp-bar-wrap">
+                <div class="hp-bar-track"><div class="hp-bar-fill" data-cur="{{ c.current_hp }}" data-max="{{ c.max_hp }}"></div></div>
+                <div class="hp-text">{{ c.current_hp }} / {{ c.max_hp }} HP</div>
+              </div>
+            </div>
+          </div>
+          {% if is_dm %}
+          <div style="padding:6px 14px;border-top:1px solid var(--border)">
+            <form method="post" action="/campaigns/{{ campaign.id }}/remove_char/{{ c.id }}" onclick="event.stopPropagation()" class="confirm-action" data-confirm="Remove '{{ c.name }}' from campaign? (Character won't be deleted)">
+              <button type="submit" class="btn btn-sm btn-danger" style="width:100%">Remove from Campaign</button>
+            </form>
+          </div>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-state">No player characters yet. Players create characters from their dashboard — the DM adds them here.</p>
+    {% endif %}
+  </div>
+
+  <!-- NPCs -->
+  <div class="panel" style="margin-top:16px">
+    <div class="flex justify-between">
+      <h2>NPCs & Enemies</h2>
+      {% if is_dm %}
+        <button class="btn btn-sm btn-secondary" onclick="openModal('modal-add-npc')">+ Quick NPC</button>
+      {% endif %}
+    </div>
+    {% if npc_chars %}
+      <div class="char-cards-grid" style="margin-top:12px">
+        {% for c in npc_chars %}
+        <a href="/characters/{{ c.id }}/sheet" class="char-card npc-card">
+          <div class="char-card-header" style="background:linear-gradient(135deg,rgba(139,32,32,0.15),transparent)">
+            <div class="char-card-name">{{ c.name }} <span class="npc-badge">NPC</span></div>
+            <div class="char-card-class" style="color:#e07070">{{ c.race or '—' }} · {{ c.char_class or 'NPC' }}</div>
+          </div>
+          <div class="char-card-body">
+            <div class="char-stat"><span class="char-stat-label">CR/Lvl</span><span class="char-stat-val">{{ c.level }}</span></div>
+            <div class="char-stat"><span class="char-stat-label">AC</span><span class="char-stat-val">{{ c.armor_class }}</span></div>
+            <div class="char-stat" style="grid-column:span 2">
+              <div class="hp-bar-wrap">
+                <div class="hp-bar-track"><div class="hp-bar-fill" data-cur="{{ c.current_hp }}" data-max="{{ c.max_hp }}"></div></div>
+                <div class="hp-text">{{ c.current_hp }} / {{ c.max_hp }} HP</div>
+              </div>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-state">No NPCs yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- DM Sidebar -->
+{% if is_dm %}
+<div>
+
+  <!-- Available Characters to Pull In -->
+  {% if available_chars %}
+  <div class="panel panel-gold" style="margin-bottom:16px">
+    <h2>Available to Add</h2>
+    <p class="text-dim" style="font-size:13px;margin-bottom:12px">Player characters waiting to join this campaign.</p>
+    {% for char, user in available_chars %}
+    <div style="padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:8px">
+      <div style="font-weight:600;color:var(--text-bright)">{{ char.name }}</div>
+      <div style="font-size:13px;color:var(--text-dim)">{{ char.race or '—' }} {{ char.char_class or '—' }} · Lvl {{ char.level }}</div>
+      <div style="font-size:12px;color:var(--ink);margin-bottom:8px">Player: {{ user.display_name or user.username if user else '—' }}</div>
+      <form method="post" action="/campaigns/{{ campaign.id }}/assign_char/{{ char.id }}">
+        <button type="submit" class="btn btn-sm" style="background:var(--green);color:white;border:none;width:100%">+ Add to Campaign</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Pending players -->
+  {% if pending %}
+  <div class="panel panel-gold" style="margin-bottom:16px">
+    <h2>Pending Approvals</h2>
+    {% for m, user in pending %}
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div class="flex">
+        <span class="pending-dot"></span>
+        <div>
+          <div style="font-weight:600;color:var(--text-bright)">{{ user.display_name or user.username if user else '—' }}</div>
+          <div style="font-size:12px;color:var(--text-dim)">wants to join</div>
+        </div>
+      </div>
+      <div class="flex" style="margin-top:8px;gap:6px">
+        <form method="post" action="/dm/campaigns/{{ campaign.id }}/approve/{{ m.user_id }}">
+          <button type="submit" class="btn btn-sm" style="background:var(--green);color:white;border:none">✓ Approve</button>
+        </form>
+        <form method="post" action="/dm/campaigns/{{ campaign.id }}/kick/{{ m.user_id }}">
+          <button type="submit" class="btn btn-sm btn-danger">✕ Deny</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Active members -->
+  <div class="panel" style="margin-bottom:16px">
+    <h2>Members</h2>
+    {% for m, user in members %}
+    {% if user %}
+    <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div class="flex justify-between">
+        <div>
+          <span style="color:var(--text-bright)">{{ user.display_name or user.username }}</span>
+          <span class="badge badge-{{ m.role }}" style="margin-left:8px">{{ m.role }}</span>
+        </div>
+        {% if m.role != 'dm' %}
+        <form method="post" action="/dm/campaigns/{{ campaign.id }}/kick/{{ user.id }}" class="confirm-action" data-confirm="Remove {{ user.username }} from campaign?">
+          <button type="submit" class="btn btn-sm btn-danger">✕</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% if not members %}
+      <p class="text-dim" style="font-size:14px">No approved members yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Danger zone -->
+  <div class="panel">
+    <h3 style="color:#e07070">Danger Zone</h3>
+    <form method="post" action="/dm/campaigns/{{ campaign.id }}/delete" class="confirm-action" data-confirm="Delete '{{ campaign.name }}'? All characters will be unlinked. This cannot be undone.">
+      <button type="submit" class="btn btn-danger" style="width:100%;margin-top:8px">Delete Campaign</button>
+    </form>
+  </div>
+
+</div>
+{% endif %}
+
+</div><!-- end grid -->
+
+<!-- Quick NPC Modal -->
+{% if is_dm %}
+<div class="modal-overlay" id="modal-add-npc">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="closeModal('modal-add-npc')">✕</button>
+    <h2>Quick NPC / Enemy</h2>
+    <p class="text-dim" style="margin-bottom:16px">Fast creation for encounters. SRD rules apply unless you override.</p>
+    <!-- AI Generate section -->
+    <div style="margin-bottom:16px;padding:14px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+      <div style="font-family:'Cinzel',serif;font-size:13px;color:var(--gold);margin-bottom:8px">🎲 AI Generate from Description</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input type="text" id="npc-ai-desc" placeholder="e.g. gruff dwarf blacksmith CR3, secretly worships Tiamat" style="flex:1">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="generateNPC()">Generate</button>
+      </div>
+      <div id="npc-ai-status" style="font-size:13px;color:var(--text-dim);font-style:italic"></div>
+    </div>
+
+    <form method="post" action="/characters/create" id="npc-form">
+      <input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+      <input type="hidden" name="is_npc" value="true">
+
+      <div class="form-row">
+        <div>
+          <label>Name</label>
+          <input type="text" name="name" required placeholder="e.g. Bandit Captain">
+        </div>
+        <div>
+          <label>CR / Level</label>
+          <input type="number" name="level" value="1" min="1" max="30">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label>Type / Class</label>
+          <select name="char_class">
+            <option>Fighter</option><option>Rogue</option><option>Wizard</option>
+            <option>Cleric</option><option>Barbarian</option><option>Ranger</option>
+            <option>Paladin</option><option>Sorcerer</option><option>Warlock</option>
+            <option>Druid</option><option>Monk</option><option>Bard</option>
+          </select>
+        </div>
+        <div>
+          <label>Race / Type</label>
+          <select name="race">
+            <option>Human</option><option>Goblin</option><option>Orc</option>
+            <option>Undead</option><option>Dragon</option><option>Fiend</option>
+            <option>Beast</option><option>Elf</option><option>Dwarf</option>
+            <option>Construct</option><option>Aberration</option><option>Elemental</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:4px">
+        <div><label>STR</label><input type="number" name="strength" value="10" min="1" max="30"></div>
+        <div><label>DEX</label><input type="number" name="dexterity" value="10" min="1" max="30"></div>
+        <div><label>CON</label><input type="number" name="constitution" value="10" min="1" max="30"></div>
+        <div><label>INT</label><input type="number" name="intelligence" value="10" min="1" max="30"></div>
+        <div><label>WIS</label><input type="number" name="wisdom" value="10" min="1" max="30"></div>
+        <div><label>CHA</label><input type="number" name="charisma" value="10" min="1" max="30"></div>
+      </div>
+
+      <div class="form-row" style="margin-top:4px">
+        <div><label>AC Override</label><input type="number" name="armor_class_override" placeholder="Auto" min="1" max="30"></div>
+        <div><label>HP Override</label><input type="number" name="hp_override" placeholder="Auto" min="1"></div>
+        <div><label>Speed (ft)</label><input type="number" name="speed" value="30" min="0" max="120"></div>
+      </div>
+
+      <label>Alignment</label>
+      <select name="alignment">
+        <option>True Neutral</option><option>Lawful Evil</option><option>Neutral Evil</option>
+        <option>Chaotic Evil</option><option>Lawful Good</option><option>Neutral Good</option>
+        <option>Chaotic Good</option><option>Lawful Neutral</option><option>Chaotic Neutral</option>
+      </select>
+
+      <label>Notes / Special Abilities</label>
+      <textarea name="notes" rows="3" placeholder="Pack tactics, Multiattack, Spellcasting, etc."></textarea>
+
+      <input type="hidden" name="background" value="Soldier">
+      <button type="submit" class="btn btn-primary" style="margin-top:16px;width:100%">Create NPC</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+
+<script>
+async function generateNPC() {
+  const desc = document.getElementById('npc-ai-desc')?.value?.trim();
+  if (!desc) { alert('Enter a description first.'); return; }
+  const status = document.getElementById('npc-ai-status');
+  status.textContent = '⏳ Generating stat block... (this may take 30-60 seconds)';
+
+  try {
+    const res = await fetch('/characters/ai_npc', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({description: desc})
+    });
+    const data = await res.json();
+    if (!data.ok) { status.textContent = '❌ ' + data.error; return; }
+    const npc = data.npc;
+    // Populate form fields
+    const set = (name, val) => {
+      const el = document.querySelector(`#npc-form [name="${name}"]`);
+      if (el && val !== undefined && val !== null) el.value = val;
+    };
+    set('name', npc.name);
+    set('level', npc.level);
+    set('char_class', npc.char_class);
+    set('race', npc.race);
+    set('alignment', npc.alignment);
+    set('strength', npc.strength);
+    set('dexterity', npc.dexterity);
+    set('constitution', npc.constitution);
+    set('intelligence', npc.intelligence);
+    set('wisdom', npc.wisdom);
+    set('charisma', npc.charisma);
+    set('armor_class_override', npc.armor_class);
+    set('hp_override', npc.max_hp);
+    set('speed', npc.speed);
+    set('notes', npc.notes + (npc.reasoning ? '\n\n[AI reasoning: ' + npc.reasoning + ']' : ''));
+    status.textContent = '✅ Stat block generated! Review and submit below.';
+  } catch(e) {
+    status.textContent = '❌ Request failed: ' + e;
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Characters</h1>
+
+  <div class="card">
+    <table class="table">
+      <tr>
+        <th>ID</th>
+        <th>PDF</th>
+        <th>Created</th>
+        <th>Has Text</th>
+      </tr>
+      {% for c in rows %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td>{{ c.pdf_filename or "â€”" }}</td>
+          <td>{{ c.created_at }}</td>
+          <td>{{ "yes" if c.raw_text else "no" }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+{% endblock %}

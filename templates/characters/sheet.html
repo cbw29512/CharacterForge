@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}{{ char.name }} — CharacterForge{% endblock %}
+{% block content %}
+<div style="max-width:1000px">
+
+<!-- Header -->
+<div class="flex justify-between" style="margin-bottom:16px;flex-wrap:wrap;gap:12px">
+  <div>
+    <h1 style="margin-bottom:2px">{{ char.name }}</h1>
+    <div style="color:var(--text-dim);font-style:italic;font-size:16px">
+      {{ data.race }} · {{ data.char_class }}{% if data.subclass %} ({{ data.subclass }}){% endif %} · Level {{ data.level }}
+      · {{ data.background or '—' }} · {{ data.alignment or '—' }}
+      {% if char.is_npc %}<span class="npc-badge" style="margin-left:8px">NPC</span>{% endif %}
+    </div>
+  </div>
+  <div class="flex" style="gap:8px;flex-wrap:wrap;align-self:flex-start">
+    {% if char.campaign_id %}
+      <a href="/campaigns/{{ char.campaign_id }}" class="btn btn-ghost btn-sm">← Campaign</a>
+    {% elif char.is_npc %}
+      <a href="/dm/" class="btn btn-ghost btn-sm">← DM Dashboard</a>
+    {% else %}
+      <a href="/player/" class="btn btn-ghost btn-sm">← My Characters</a>
+    {% endif %}
+    {% if can_edit %}
+    <button class="btn btn-secondary btn-sm" onclick="openModal('modal-save-template')">💾 Save as Template</button>
+    {% endif %}
+    {% if can_delete %}
+    <form method="post" action="/characters/{{ char.id }}/delete" class="confirm-action" data-confirm="Delete {{ char.name }}? This cannot be undone.">
+      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Row 1: Proficiency + Inspiration + Core Combat -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:14px">
+  <div class="stat-bubble">
+    <div class="stat-bubble-label">Proficiency</div>
+    <div class="stat-bubble-val">+{{ data.proficiency_bonus }}</div>
+  </div>
+  <div class="stat-bubble">
+    <div class="stat-bubble-label">Armor Class</div>
+    <div class="stat-bubble-val">{{ data.armor_class }}</div>
+  </div>
+  <div class="stat-bubble">
+    <div class="stat-bubble-label">Initiative</div>
+    <div class="stat-bubble-val">{{ '+' if data.dex_mod >= 0 else '' }}{{ data.dex_mod }}</div>
+  </div>
+  <div class="stat-bubble">
+    <div class="stat-bubble-label">Speed</div>
+    <div class="stat-bubble-val">{{ data.speed }}ft</div>
+  </div>
+  <div class="stat-bubble">
+    <div class="stat-bubble-label">Hit Dice</div>
+    <div class="stat-bubble-val" style="font-size:16px">{{ data.hit_dice or '—' }}</div>
+  </div>
+  <div class="stat-bubble">
+    <div class="stat-bubble-label">XP</div>
+    <div class="stat-bubble-val" style="font-size:16px">{{ data.experience_points }}</div>
+  </div>
+</div>
+
+<!-- HP Block -->
+<div class="panel" style="margin-bottom:14px;padding:14px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:center">
+    <div>
+      <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Hit Points</div>
+      <div style="font-size:28px;font-weight:700;color:var(--text-bright)">{{ data.current_hp }} <span style="font-size:16px;color:var(--text-dim)">/ {{ data.max_hp }}</span></div>
+      <div class="hp-bar-track" style="height:8px;margin-top:6px"><div class="hp-bar-fill" data-cur="{{ data.current_hp }}" data-max="{{ data.max_hp }}"></div></div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Temp HP</div>
+      <div style="font-size:24px;font-weight:700;color:{{ 'var(--ink)' if data.temp_hp else 'var(--text-dim)' }}">{{ data.temp_hp or '—' }}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">Death Saves</div>
+      <div style="display:flex;gap:4px;justify-content:flex-end">
+        <span style="color:var(--green-light)">☐ ☐ ☐</span>
+        <span style="color:var(--red-light);margin-left:8px">☐ ☐ ☐</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:2px">Successes / Failures</div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Sheet: 3 columns -->
+<div style="display:grid;grid-template-columns:180px 1fr 1fr;gap:14px;align-items:start">
+
+<!-- Col 1: Ability Scores + Saves -->
+<div>
+  {% set ability_data = [
+    ('Strength','str_mod','strength'),
+    ('Dexterity','dex_mod','dexterity'),
+    ('Constitution','con_mod','constitution'),
+    ('Intelligence','int_mod','intelligence'),
+    ('Wisdom','wis_mod','wisdom'),
+    ('Charisma','cha_mod','charisma')
+  ] %}
+
+  {% for label, mod_key, stat_key in ability_data %}
+  {% set is_save = data.saving_throws.get(label, False) %}
+  <div class="ability-block">
+    <div class="ability-block-name">{{ label[:3].upper() }}</div>
+    <div class="ability-block-score">{{ data[stat_key] }}</div>
+    <div class="ability-block-mod">{{ '+' if data[mod_key] >= 0 else '' }}{{ data[mod_key] }}</div>
+    <div class="save-row">
+      <span class="prof-dot {{ 'filled' if is_save else '' }}"></span>
+      <span style="font-size:11px;color:var(--text-dim)">Save {{ '+' if data[mod_key] + (data.proficiency_bonus if is_save else 0) >= 0 else '' }}{{ data[mod_key] + (data.proficiency_bonus if is_save else 0) }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Col 2: Skills -->
+<div class="panel" style="padding:14px">
+  <h3 style="margin-bottom:10px">Skills</h3>
+  {% set skill_map = [
+    ('Acrobatics','dex_mod'),('Animal Handling','wis_mod'),('Arcana','int_mod'),
+    ('Athletics','str_mod'),('Deception','cha_mod'),('History','int_mod'),
+    ('Insight','wis_mod'),('Intimidation','cha_mod'),('Investigation','int_mod'),
+    ('Medicine','wis_mod'),('Nature','int_mod'),('Perception','wis_mod'),
+    ('Performance','cha_mod'),('Persuasion','cha_mod'),('Religion','int_mod'),
+    ('Sleight of Hand','dex_mod'),('Stealth','dex_mod'),('Survival','wis_mod')
+  ] %}
+  <div style="font-size:13px">
+  {% for skill, mod_key in skill_map %}
+  {% set is_prof = data.skills.get(skill, False) %}
+  {% set total = data[mod_key] + (data.proficiency_bonus if is_prof else 0) %}
+  <div class="skill-row {{ 'skill-prof' if is_prof else '' }}">
+    <span class="prof-dot {{ 'filled' if is_prof else '' }}"></span>
+    <span class="skill-row-mod">{{ '+' if total >= 0 else '' }}{{ total }}</span>
+    <span class="skill-row-name">{{ skill }}</span>
+    <span class="skill-row-ability">({{ mod_key[:3].upper() }})</span>
+  </div>
+  {% endfor %}
+  </div>
+
+  <!-- Passive Perception -->
+  <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+    {% set perc_prof = data.skills.get('Perception', False) %}
+    {% set passive = 10 + data.wis_mod + (data.proficiency_bonus if perc_prof else 0) %}
+    <div style="font-size:13px;color:var(--text-dim)">Passive Perception: <strong style="color:var(--text-bright)">{{ passive }}</strong></div>
+  </div>
+</div>
+
+<!-- Col 3: Features, Equipment, Personality -->
+<div style="display:flex;flex-direction:column;gap:14px">
+
+  {% if data.features %}
+  <div class="panel" style="padding:14px">
+    <h3 style="margin-bottom:10px">Features & Traits</h3>
+    <div>
+      {% for feat in data.features %}
+        <span class="feature-tag">{{ feat }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if data.equipment %}
+  <div class="panel" style="padding:14px">
+    <h3 style="margin-bottom:8px">Equipment</h3>
+    {% for item in data.equipment %}
+      <div style="font-size:13px;padding:3px 0;border-bottom:1px solid rgba(42,46,68,0.5);color:var(--text)">{{ item }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Personality block -->
+  {% set traits = data.traits %}
+  {% if traits.get('personality') or traits.get('ideal') or traits.get('bond') or traits.get('flaw') %}
+  <div class="panel" style="padding:14px">
+    <h3 style="margin-bottom:10px">Personality</h3>
+    {% if traits.get('personality') %}
+    <div class="trait-block"><div class="trait-label">Personality Trait</div><div class="trait-text">{{ traits.personality }}</div></div>
+    {% endif %}
+    {% if traits.get('ideal') %}
+    <div class="trait-block"><div class="trait-label">Ideal</div><div class="trait-text">{{ traits.ideal }}</div></div>
+    {% endif %}
+    {% if traits.get('bond') %}
+    <div class="trait-block"><div class="trait-label">Bond</div><div class="trait-text">{{ traits.bond }}</div></div>
+    {% endif %}
+    {% if traits.get('flaw') %}
+    <div class="trait-block"><div class="trait-label">Flaw</div><div class="trait-text">{{ traits.flaw }}</div></div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if data.notes %}
+  <div class="panel" style="padding:14px">
+    <h3 style="margin-bottom:8px">Notes</h3>
+    <p style="font-size:14px;font-style:italic;color:var(--text);white-space:pre-wrap">{{ data.notes }}</p>
+  </div>
+  {% endif %}
+
+</div>
+</div><!-- end 3-col grid -->
+
+
+<!-- Save as Template Modal -->
+<div class="modal-overlay" id="modal-save-template">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close" onclick="closeModal('modal-save-template')">✕</button>
+    <h2>💾 Save as Template</h2>
+    <p class="text-dim" style="margin-bottom:16px">Save this build so you can load it instantly next time. Only the build is saved — not the character name or campaign.</p>
+    <form method="post" action="/templates/save_from_char/{{ char.id }}">
+      <label>Template Name <span style="color:var(--red-light)">*</span></label>
+      <input type="text" name="template_name" placeholder='e.g. "Dex Fighter Build" or "Goblin Shaman CR2"' required>
+      <label>Description <span style="color:var(--text-dim);font-size:12px">(optional)</span></label>
+      <input type="text" name="template_description" placeholder="What makes this build special?">
+      <div class="flex" style="gap:8px;margin-top:16px">
+        <button type="submit" class="btn btn-primary" style="flex:1">Save Template</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-save-template')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+</div>
+
+<style>
+.stat-bubble {
+  background: var(--bg2);
+  border: 1px solid var(--border-gold);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.stat-bubble-label { font-size: 10px; font-family: 'Cinzel', serif; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.stat-bubble-val { font-size: 22px; font-weight: 700; color: var(--text-bright); font-family: 'Cinzel', serif; }
+
+.ability-block {
+  background: var(--bg2);
+  border: 1px solid var(--border-gold);
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.ability-block-name { font-size: 10px; font-family: 'Cinzel', serif; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.ability-block-score { font-size: 28px; font-weight: 700; color: var(--text-bright); line-height: 1.1; }
+.ability-block-mod { font-size: 18px; color: var(--gold); font-weight: 600; background: var(--bg3); border-radius: 50%; width: 36px; height: 36px; line-height: 36px; margin: 4px auto; }
+.save-row { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 4px; }
+
+.prof-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border-gold); display: inline-block; flex-shrink: 0; }
+.prof-dot.filled { background: var(--gold); border-color: var(--gold); }
+
+.skill-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-bottom: 1px solid rgba(42,46,68,0.4); }
+.skill-row.skill-prof .skill-row-name { color: var(--text-bright); }
+.skill-row-mod { width: 28px; text-align: right; font-weight: 600; color: var(--text-bright); font-size: 12px; }
+.skill-row-name { flex: 1; color: var(--text); }
+.skill-row-ability { font-size: 11px; color: var(--text-dim); }
+
+.trait-block { margin-bottom: 10px; }
+.trait-label { font-family: 'Cinzel', serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gold); margin-bottom: 3px; }
+.trait-text { font-size: 13px; color: var(--text); font-style: italic; }
+
+@media(max-width:700px) {
+  div[style*="grid-template-columns:180px"] { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}

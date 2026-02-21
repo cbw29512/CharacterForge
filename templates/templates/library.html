@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Template Library — CharacterForge{% endblock %}
+{% block content %}
+
+<div class="flex justify-between" style="margin-bottom:16px">
+  <div>
+    <h1>Template Library</h1>
+    <p class="subtitle">Your saved character builds — load any template into the wizard.</p>
+  </div>
+  <a href="/characters/new" class="btn btn-primary btn-sm">+ New Character</a>
+</div>
+
+{% if not pc_templates and not npc_templates %}
+<div class="panel" style="text-align:center;padding:48px">
+  <div style="font-size:40px;margin-bottom:12px">📋</div>
+  <h2>No Templates Yet</h2>
+  <p class="text-dim" style="margin:10px 0 20px">Build a character, then click "Save as Template" on the character sheet to store it here for quick reuse.</p>
+  <a href="/characters/new" class="btn btn-primary">Build a Character</a>
+</div>
+{% endif %}
+
+{% if pc_templates %}
+<h2 style="margin-bottom:12px">Character Templates</h2>
+<div class="cards-grid">
+  {% for t in pc_templates %}
+  <div class="template-card">
+    <div class="template-card-name">{{ t.name }}</div>
+    {% if t.description %}<div class="template-card-desc">{{ t.description }}</div>{% endif %}
+    <div class="template-card-build">
+      <span class="bonus-tag">{{ t.race or '—' }}</span>
+      <span class="bonus-tag">{{ t.char_class or '—' }}</span>
+      <span class="bonus-tag">Lvl {{ t.level }}</span>
+      {% if t.background %}<span class="bonus-tag">{{ t.background }}</span>{% endif %}
+    </div>
+    <div class="template-stats-row">
+      {% for abbr, val in [('STR',t.strength),('DEX',t.dexterity),('CON',t.constitution),('INT',t.intelligence),('WIS',t.wisdom),('CHA',t.charisma)] %}
+      <div class="template-stat"><div class="template-stat-label">{{ abbr }}</div><div class="template-stat-val">{{ val }}</div></div>
+      {% endfor %}
+    </div>
+    <div style="font-size:12px;color:var(--text-dim);margin-top:8px;margin-bottom:10px">Used {{ t.times_used }} time{{ 's' if t.times_used != 1 else '' }}</div>
+    <div class="flex" style="gap:8px">
+      <a href="/characters/new?template={{ t.id }}" class="btn btn-primary btn-sm" style="flex:1;text-align:center">Load Template</a>
+      <form method="post" action="/templates/{{ t.id }}/delete" class="confirm-action" data-confirm="Delete template '{{ t.name }}'?">
+        <button type="submit" class="btn btn-danger btn-sm">✕</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if npc_templates %}
+<h2 style="margin-top:24px;margin-bottom:12px">NPC Templates</h2>
+<div class="cards-grid">
+  {% for t in npc_templates %}
+  <div class="template-card" style="border-color:rgba(139,32,32,0.3)">
+    <div class="template-card-name">{{ t.name }} <span class="npc-badge">NPC</span></div>
+    {% if t.description %}<div class="template-card-desc">{{ t.description }}</div>{% endif %}
+    <div class="template-card-build">
+      <span class="bonus-tag">{{ t.race or '—' }}</span>
+      <span class="bonus-tag">{{ t.char_class or '—' }}</span>
+      <span class="bonus-tag">CR {{ t.level }}</span>
+    </div>
+    <div class="template-stats-row">
+      {% for abbr, val in [('STR',t.strength),('DEX',t.dexterity),('CON',t.constitution),('INT',t.intelligence),('WIS',t.wisdom),('CHA',t.charisma)] %}
+      <div class="template-stat"><div class="template-stat-label">{{ abbr }}</div><div class="template-stat-val">{{ val }}</div></div>
+      {% endfor %}
+    </div>
+    <div style="font-size:12px;color:var(--text-dim);margin-top:8px;margin-bottom:10px">Used {{ t.times_used }}×</div>
+    <div class="flex" style="gap:8px">
+      <a href="/characters/new?npc=true&template={{ t.id }}" class="btn btn-secondary btn-sm" style="flex:1;text-align:center">Load NPC Template</a>
+      <form method="post" action="/templates/{{ t.id }}/delete" class="confirm-action" data-confirm="Delete template '{{ t.name }}'?">
+        <button type="submit" class="btn btn-danger btn-sm">✕</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<style>
+.template-card { background:var(--bg2); border:1px solid var(--border-gold); border-radius:10px; padding:14px; }
+.template-card-name { font-family:'Cinzel',serif; font-size:15px; color:var(--gold); margin-bottom:4px; }
+.template-card-desc { font-size:13px; color:var(--text-dim); font-style:italic; margin-bottom:8px; }
+.template-card-build { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+.template-stats-row { display:grid; grid-template-columns:repeat(6,1fr); gap:4px; }
+.template-stat { text-align:center; background:var(--bg3); border-radius:4px; padding:4px 2px; }
+.template-stat-label { font-size:9px; color:var(--text-dim); }
+.template-stat-val { font-size:13px; font-weight:700; color:var(--text-bright); }
+</style>
+{% endblock %}

@@ -1,0 +1,42 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.dist-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+ENV/
+env/
+
+# Flask / app runtime
+instance/
+*.sqlite
+*.sqlite3
+*.db
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Node / frontend build artifacts (if any)
+node_modules/
+dist/
+build/
+
+# Secrets / local overrides
+.env
+.env.*
+secrets/
+*.token

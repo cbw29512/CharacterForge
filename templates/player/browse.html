@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Browse Campaigns — CharacterForge{% endblock %}
+{% block content %}
+<div class="flex justify-between" style="margin-bottom:8px">
+  <div>
+    <h1>Browse Campaigns</h1>
+    <p class="subtitle">Find a campaign and request to join.</p>
+  </div>
+  <a href="/player/" class="btn btn-secondary btn-sm">← Back</a>
+</div>
+
+{% if campaigns %}
+  <div class="cards-grid">
+    {% for c in campaigns %}
+    <div class="campaign-card" style="cursor:default">
+      <div class="campaign-card-name">{{ c.name }}</div>
+      <div class="campaign-card-desc">{{ c.description or 'No description.' }}</div>
+      <div class="campaign-card-meta">
+        <span>🎲 DM: {{ c.dm.display_name or c.dm.username if c.dm else '—' }}</span>
+      </div>
+      <form method="post" action="/player/campaigns/{{ c.id }}/join" style="margin-top:14px">
+        <button type="submit" class="btn btn-primary btn-sm">Request to Join</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="panel" style="text-align:center;padding:48px">
+    <div style="font-size:48px;margin-bottom:12px">🗺</div>
+    <h2>No Campaigns Available</h2>
+    <p class="text-dim">No campaigns are open for new players right now.</p>
+  </div>
+{% endif %}
+{% endblock %}

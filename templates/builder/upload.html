@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Upload D&D Beyond PDF</h1>
+
+  <div class="card">
+    <div>Ollama status: <b>{{ "OK" if ollama_ok else "Not reachable" }}</b></div>
+    <div class="hint">Upload works even if Ollama is down.</div>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="card">
+    <input type="file" name="pdf" accept="application/pdf" />
+    <button type="submit">Upload</button>
+  </form>
+
+  <div class="hint">Next: approval screen + field mapping (we implement next).</div>
+{% endblock %}

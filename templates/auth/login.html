@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CharacterForge — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-box">
+    <div class="login-title">⚔ CharacterForge</div>
+    <div class="login-sub">Forge your legend. Enter the realm.</div>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}
+        {% for cat, msg in msgs %}
+          <div class="flash flash-{{ cat }}" style="margin-bottom:12px">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="/auth/login">
+      <input type="hidden" name="role" id="role-input" value="player">
+
+      <label>I am a...</label>
+      <div class="role-selector">
+        <div class="role-btn" data-role="player">⚔ Player</div>
+        <div class="role-btn" data-role="dm">🎲 Dungeon Master</div>
+        <div class="role-btn" data-role="admin">🛡 Admin</div>
+      </div>
+
+      <label>Username</label>
+      <input type="text" name="username" autocomplete="username" autofocus required>
+
+      <label>Password</label>
+      <input type="password" name="password" autocomplete="current-password" required>
+
+      <button type="submit" class="btn btn-primary" style="width:100%">Enter the Realm</button>
+    </form>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Create NPC' if is_npc else 'Create Character' }} â€” CharacterForge{% endblock %}
+{% block content %}
+<div style="max-width:900px">
+
+<div class="flex justify-between" style="margin-bottom:16px">
+  <div>
+    <h1>{{ 'Create NPC' if is_npc else 'Build Your Character' }}</h1>
+    <p class="subtitle">{{ 'NPC creator â€” AI-guided stat block.' if is_npc else 'AI-guided character creation â€” D&D 5e SRD rules.' }}</p>
+  </div>
+  {% if campaign_id %}
+    <a href="/campaigns/{{ campaign_id }}" class="btn btn-ghost btn-sm">â† Campaign</a>
+  {% else %}
+    <a href="{{ '/dm/' if session.get('role') in ['dm','admin'] else '/player/' }}" class="btn btn-ghost btn-sm">â† Dashboard</a>
+  {% endif %}
+</div>
+
+<!-- Ollama status bar -->
+<div id="ollama-status-bar" style="margin-bottom:14px;padding:10px 14px;border-radius:8px;font-size:13px;
+  {% if ollama_ok %}background:rgba(74,143,74,0.12);border:1px solid rgba(74,143,74,0.3);color:#7dbf7d
+  {% else %}background:rgba(139,100,20,0.12);border:1px solid rgba(139,100,20,0.3);color:#c9a84c{% endif %}">
+  {% if ollama_ok %}
+    ðŸŸ¢ AI DM online â€” full guidance active. Voice narration available.
+  {% else %}
+    ðŸŸ¡ AI DM offline (Ollama not detected on port 4242). Browser voice guidance is active.
+    <span style="color:var(--text-dim)"> â€” Start Ollama with your model to enable full AI chat.</span>
+  {% endif %}
+</div>
+
+<!-- Step nav -->
+<div class="wizard-steps" id="step-nav">
+  <div class="wizard-step active" data-step="0">â‘  Identity</div>
+  <div class="wizard-step" data-step="1">â‘¡ Race</div>
+  <div class="wizard-step" data-step="2">â‘¢ Class</div>
+  <div class="wizard-step" data-step="3">â‘£ Background</div>
+  <div class="wizard-step" data-step="4">â‘¤ Ability Scores</div>
+  <div class="wizard-step" data-step="5">â‘¥ Personality</div>
+  <div class="wizard-step" data-step="6">â‘¦ Finalize</div>
+</div>
+
+<form method="post" action="/characters/create" id="char-form">
+  <input type="hidden" name="campaign_id" value="{{ campaign_id or '' }}">
+  <input type="hidden" name="is_npc" value="{{ 'true' if is_npc else 'false' }}">
+
+  <!-- â•â• STEP 1: IDENTITY â•â• -->
+  <div class="wizard-section" id="step-0">
+    <div class="wizard-two-col">
+      <div class="panel panel-gold">
+        <h2>Identity</h2>
+        <label>Character Name</label>
+        <input type="text" name="name" id="field-name" placeholder="What are you called?" required>
+        <label>Level</label>
+        <input type="number" name="level" id="field-level" value="1" min="1" max="20">
+        <label>Alignment</label>
+        <select name="alignment" id="field-alignment">
+          {% for a in alignments %}<option>{{ a }}</option>{% endfor %}
+        </select>
+        <div class="wizard-nav-row">
+          <button type="button" class="btn btn-primary" onclick="goStep(1)">Next: Race â†’</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-header">
+          ðŸŽ² AI Dungeon Master
+          <button type="button" id="voice-toggle" onclick="toggleVoice()" class="btn btn-sm btn-ghost" style="float:right;font-size:11px;padding:2px 8px">ðŸ”Š Voice On</button>
+        </div>
+        <div class="ai-chat-box" id="chat-0"></div>
+        <div class="ai-input-row">
+          <input type="text" class="ai-input" id="input-0" placeholder="Ask anything about your character concept...">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="askAI(0,'general')">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- â•â• STEP 2: RACE â•â• -->
+  <div class="wizard-section" id="step-1" style="display:none">
+    <div class="wizard-two-col">
+      <div class="panel panel-gold">
+        <h2>Choose Race</h2>
+        <div class="choice-grid" id="race-grid">
+          {% for r in races %}
+          <div class="choice-card" data-name="{{ r.name }}" onclick="selectChoice('race','{{ r.name }}',this)">
+            <div class="choice-name">{{ r.name }}</div>
+            <div class="choice-meta">
+              {% for stat, bonus in r.ability_bonuses.items() %}<span class="bonus-tag">+{{ bonus }} {{ stat[:3].upper() }}</span>{% endfor %}
+              <span class="bonus-tag spd">{{ r.speed }}ft</span>
+            </div>
+            <div class="choice-traits">{{ r.traits[:2]|join(' Â· ') }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="race" id="field-race" value="Human">
+        <div class="wizard-nav-row">
+          <button type="button" class="btn btn-ghost" onclick="goStep(0)">â† Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(2)">Next: Class â†’</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-header">ðŸŽ² Race Advisor</div>
+        <div class="ai-chat-box" id="chat-1"></div>
+        <div class="ai-input-row">
+          <input type="text" class="ai-input" id="input-1" placeholder="Ask about any race...">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="askAI(1,'race')">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- â•â• STEP 3: CLASS â•â• -->
+  <div class="wizard-section" id="step-2" style="display:none">
+    <div class="wizard-two-col">
+      <div class="panel panel-gold">
+        <h2>Choose Class</h2>
+        <div class="choice-grid" id="class-grid">
+          {% for c in classes %}
+          <div class="choice-card" data-name="{{ c.name }}" onclick="selectChoice('char_class','{{ c.name }}',this)">
+            <div class="choice-name">{{ c.name }}</div>
+            <div class="choice-meta">
+              <span class="bonus-tag">{{ c.hit_die }}</span>
+              <span class="bonus-tag">{{ c.primary_ability }}</span>
+            </div>
+            <div class="choice-traits">{% for f in c.features_by_level.get(1,[])[:2] %}{{ f }}{% if not loop.last %} Â· {% endif %}{% endfor %}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="char_class" id="field-char_class" value="Fighter">
+        <div class="wizard-nav-row">
+          <button type="button" class="btn btn-ghost" onclick="goStep(1)">â† Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(3)">Next: Background â†’</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-header">ðŸŽ² Class Advisor</div>
+        <div class="ai-chat-box" id="chat-2"></div>
+        <div class="ai-input-row">
+          <input type="text" class="ai-input" id="input-2" placeholder="Ask about any class...">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="askAI(2,'class')">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- â•â• STEP 4: BACKGROUND â•â• -->
+  <div class="wizard-section" id="step-3" style="display:none">
+    <div class="wizard-two-col">
+      <div class="panel panel-gold">
+        <h2>Choose Background</h2>
+        <div class="choice-grid" id="bg-grid">
+          {% for b in backgrounds %}
+          <div class="choice-card" data-name="{{ b.name }}" onclick="selectChoice('background','{{ b.name }}',this)">
+            <div class="choice-name">{{ b.name }}</div>
+            <div class="choice-meta">{% for s in b.skill_proficiencies %}<span class="bonus-tag">{{ s }}</span>{% endfor %}</div>
+            <div class="choice-traits">{{ b.feature }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="background" id="field-background" value="Soldier">
+        <div class="wizard-nav-row">
+          <button type="button" class="btn btn-ghost" onclick="goStep(2)">â† Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(4)">Next: Ability Scores â†’</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-header">ðŸŽ² Background Advisor</div>
+        <div class="ai-chat-box" id="chat-3"></div>
+        <div class="ai-input-row">
+          <input type="text" class="ai-input" id="input-3" placeholder="Ask about backgrounds...">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="askAI(3,'background')">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- â•â• STEP 5: ABILITY SCORES â•â• -->
+  <div class="wizard-section" id="step-4" style="display:none">
+    <div class="wizard-two-col">
+      <div class="panel panel-gold">
+        <h2>Ability Scores</h2>
+        <div style="background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:16px;font-size:14px">
+          <strong style="color:var(--gold)">Standard Array:</strong>
+          <span class="text-dim"> Assign 15, 14, 13, 12, 10, 8</span>
+          <button type="button" class="btn btn-sm btn-secondary" style="margin-left:8px" onclick="applyStandardArray()">Auto-Apply</button>
+        </div>
+        <div class="ability-grid-large">
+          {% for stat, label in [('strength','Strength'),('dexterity','Dexterity'),('constitution','Constitution'),('intelligence','Intelligence'),('wisdom','Wisdom'),('charisma','Charisma')] %}
+          <div class="ability-box-large">
+            <div class="ability-label">{{ label }}</div>
+            <div class="ability-abbr">{{ label[:3].upper() }}</div>
+            <input type="number" name="{{ stat }}" id="score-{{ stat }}" class="ability-score-input" value="10" min="1" max="20" oninput="updateMod('{{ stat }}')">
+            <div class="ability-mod" id="mod-{{ stat }}">+0</div>
+          </div>
+          {% endfor %}
+        </div>
+        <div id="racial-bonus-note" style="margin-top:10px;font-size:13px;color:var(--gold-light);font-style:italic"></div>
+        <div class="wizard-nav-row">
+          <button type="button" class="btn btn-ghost" onclick="goStep(3)">â† Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(5)">Next: Personality â†’</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-header">ðŸŽ² Stats Advisor</div>
+        <div class="ai-chat-box" id="chat-4"></div>
+        <button type="button" class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:8px" onclick="getStatRec()">ðŸ“Š Recommend Stat Assignments for My Build</button>
+        <div class="ai-input-row">
+          <input type="text" class="ai-input" id="input-4" placeholder="Ask about ability scores...">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="askAI(4,'abilities')">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- â•â• STEP 6: PERSONALITY â•â• -->
+  <div class="wizard-section" id="step-5" style="display:none">
+    <div class="wizard-two-col">
+      <div class="panel panel-gold">
+        <h2>Personality</h2>
+        <p class="text-dim" style="margin-bottom:14px">Define who your character is. Use the AI to generate all four.</p>
+        <label>Personality Trait</label>
+        <textarea name="personality_trait" id="field-personality_trait" rows="2" placeholder="How does your character generally behave?"></textarea>
+        <label>Ideal</label>
+        <textarea name="ideal" id="field-ideal" rows="2" placeholder="What does your character believe in above all?"></textarea>
+        <label>Bond</label>
+        <textarea name="bond" id="field-bond" rows="2" placeholder="What connects your character to the world?"></textarea>
+        <label>Flaw</label>
+        <textarea name="flaw" id="field-flaw" rows="2" placeholder="What weakness holds your character back?"></textarea>
+        <div class="wizard-nav-row">
+          <button type="button" class="btn btn-ghost" onclick="goStep(4)">â† Back</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(6)">Next: Finalize â†’</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-header">ðŸŽ² Personality Advisor</div>
+        <div class="ai-chat-box" id="chat-5"></div>
+        <button type="button" class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:8px" onclick="getPersonality()">âœ¨ Generate Personality for My Build</button>
+        <div class="ai-input-row">
+          <input type="text" class="ai-input" id="input-5" placeholder="Describe your concept...">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="askAI(5,'personality')">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- â•â• STEP 7: FINALIZE â•â• -->
+  <div class="wizard-section" id="step-6" style="display:none">
+    <div class="wizard-two-col">
+      <div class="panel panel-gold">
+        <h2>Finalize</h2>
+        <div id="build-summary" style="background:var(--bg3);border-radius:8px;padding:14px;margin-bottom:16px;font-size:14px;line-height:1.9">
+          Loading summary...
+        </div>
+        <label>Notes / Backstory</label>
+        <textarea name="notes" id="field-notes" rows="4" placeholder="Extra details, backstory, or notes for your DM..."></textarea>
+        <div class="wizard-nav-row">
+          <button type="button" class="btn btn-ghost" onclick="goStep(5)">â† Back</button>
+          <button type="submit" class="btn btn-primary" style="font-size:15px;padding:12px 28px">âš” Create Character</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-header">ðŸŽ² Final Review</div>
+        <div class="ai-chat-box" id="chat-6"></div>
+        <div class="ai-input-row">
+          <input type="text" class="ai-input" id="input-6" placeholder="Any final questions?">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="askAI(6,'general')">Ask</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</form>
+</div>
+
+<style>
+.wizard-two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; align-items:start; }
+@media(max-width:700px){ .wizard-two-col{ grid-template-columns:1fr; } }
+
+.choice-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:8px; margin-bottom:16px; max-height:400px; overflow-y:auto; padding-right:4px; }
+.choice-card { background:var(--bg3); border:2px solid var(--border); border-radius:8px; padding:10px; cursor:pointer; transition:border-color 0.15s; }
+.choice-card:hover { border-color:var(--border-gold); }
+.choice-card.selected { border-color:var(--gold); background:rgba(201,168,76,0.08); }
+.choice-name { font-family:'Cinzel',serif; font-size:13px; color:var(--gold); margin-bottom:5px; }
+.choice-meta { display:flex; flex-wrap:wrap; gap:3px; margin-bottom:4px; }
+.choice-traits { font-size:11px; color:var(--text-dim); line-height:1.4; }
+.bonus-tag { font-size:10px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.2); border-radius:3px; padding:1px 5px; color:var(--gold-light); }
+.bonus-tag.spd { background:rgba(106,143,176,0.1); border-color:rgba(106,143,176,0.25); color:var(--ink); }
+
+.ai-panel { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+.ai-panel-header { font-family:'Cinzel',serif; font-size:13px; color:var(--gold); border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:4px; }
+.ai-chat-box { background:var(--bg3); border-radius:6px; padding:10px; min-height:220px; max-height:320px; overflow-y:auto; font-size:13px; }
+.ai-msg { margin-bottom:10px; line-height:1.6; padding:7px 10px; border-radius:5px; }
+.ai-msg.dm { background:rgba(201,168,76,0.06); color:var(--text); border-left:3px solid var(--gold); }
+.ai-msg.user { background:rgba(106,143,176,0.08); color:var(--ink); border-right:3px solid var(--ink); text-align:right; }
+.ai-msg.thinking { color:var(--text-dim); font-style:italic; }
+.ai-input-row { display:flex; gap:6px; }
+.ai-input { flex:1; }
+
+.wizard-nav-row { display:flex; gap:10px; margin-top:20px; justify-content:flex-start; }
+.wizard-step { padding:8px 12px; font-size:11px; white-space:nowrap; }
+
+.ability-grid-large { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:8px; }
+.ability-box-large { text-align:center; }
+.ability-label { font-size:10px; color:var(--text-dim); margin-bottom:2px; }
+.ability-abbr { font-family:'Cinzel',serif; font-size:12px; color:var(--gold); margin-bottom:4px; }
+.ability-score-input { text-align:center; font-size:22px; font-weight:700; padding:6px 4px; width:100%; }
+.ability-mod { font-size:15px; color:var(--gold); margin-top:4px; font-weight:600; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// â”€â”€ STATE â”€â”€
+const OLLAMA_OK = {{ 'true' if ollama_ok else 'false' }};
+const IS_NPC = {{ 'true' if is_npc else 'false' }};
+const PRELOAD = {{ (preload | tojson) if preload else 'null' }};
+
+const RACIAL_BONUSES = {};
+{% for r in races %}
+RACIAL_BONUSES[{{ r.name | tojson }}] = {{ r.ability_bonuses | tojson }};
+{% endfor %}
+
+// Local knowledge for offline voice guidance (no Ollama needed)
+const STEP_INTROS = {
+  0: "Welcome, adventurer! I am your AI Dungeon Master. Tell me your character's name, then choose their level and alignment. Level 1 is recommended for new characters. Alignment reflects their moral outlook â€” Lawful Good characters follow rules and help others, while Chaotic Evil ones act on selfish impulse.",
+  1: "Choose your race wisely. Each race grants ability score bonuses and special traits. Elves gain Dexterity and have darkvision. Humans gain plus one to all stats â€” versatile and reliable. Dwarves are tough with Constitution bonuses. Click any race card and I will explain it fully.",
+  2: "Your class defines how you fight and play. Fighters are durable warriors using Strength or Dexterity. Wizards cast powerful spells but are fragile, needing high Intelligence. Rogues use Dexterity for stealth and sneak attacks. Clerics combine healing and combat with Wisdom-based magic. Click a class to learn more.",
+  3: "Your background tells your story before adventuring. It grants two skill proficiencies and a special feature. A Soldier gains Athletics and Intimidation. A Sage gains Arcana and History. Choose one that fits your character concept and complements your class skills.",
+  4: "Time to set your six ability scores using the standard array: 15, 14, 13, 12, 10, and 8. Click Auto-Apply to fill them in order, then rearrange as needed. Put your highest score in your class's primary ability â€” Strength for Fighters, Intelligence for Wizards, Dexterity for Rogues.",
+  5: "Define your character's personality. A Personality Trait describes how they act. An Ideal is what they believe in deeply. A Bond ties them to the world â€” a person, place, or event. A Flaw is their weakness or vice. Click Generate Personality and I will create all four based on your build.",
+  6: "Your character is nearly complete! Review the summary on the left. Add any backstory or notes for your Dungeon Master. When ready, click Create Character to finalize your build."
+};
+
+let wizStep = 0;
+let voiceEnabled = true;
+let build = { race:'Human', char_class:'Fighter', background:'Soldier', level:1, alignment:'True Neutral' };
+
+// â”€â”€ VOICE (Web Speech API) â”€â”€
+function speak(text) {
+  if (!voiceEnabled || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 0.92;
+  utt.pitch = 0.85;
+  // Try to pick a deeper voice
+  const voices = window.speechSynthesis.getVoices();
+  const pref = voices.find(v => v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('male'));
+  if (pref) utt.voice = pref;
+  window.speechSynthesis.speak(utt);
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  const btn = document.getElementById('voice-toggle');
+  if (btn) btn.textContent = voiceEnabled ? 'ðŸ”Š Voice On' : 'ðŸ”‡ Voice Off';
+  if (!voiceEnabled) window.speechSynthesis.cancel();
+}
+
+// â”€â”€ NAVIGATION â”€â”€
+function goStep(idx) {
+  document.querySelectorAll('.wizard-section').forEach(function(s, i) {
+    s.style.display = i === idx ? 'block' : 'none';
+  });
+  document.querySelectorAll('.wizard-step').forEach(function(s, i) {
+    s.classList.toggle('active', i === idx);
+    s.classList.toggle('done', i < idx);
+  });
+  wizStep = idx;
+  window.scrollTo(0, 0);
+
+  // Speak intro if chat box is empty
+  const box = document.getElementById('chat-' + idx);
+  if (box && box.children.length === 0) {
+    const intro = STEP_INTROS[idx] || '';
+    if (intro) {
+      addMsg(idx, intro, 'dm');
+      speak(intro);
+    }
+  }
+  if (idx === 4) showRacialBonuses();
+  if (idx === 6) renderBuildSummary();
+}
+
+// â”€â”€ CHOICE CARDS â”€â”€
+function selectChoice(field, value, el) {
+  const grid = el.closest('.choice-grid');
+  grid.querySelectorAll('.choice-card').forEach(function(c){ c.classList.remove('selected'); });
+  el.classList.add('selected');
+  document.getElementById('field-' + field).value = value;
+  build[field] = value;
+  const stepMap = { race:1, char_class:2, background:3 };
+  const stepIdx = stepMap[field];
+  const stepName = field === 'char_class' ? 'class' : field;
+  if (stepIdx !== undefined) {
+    const msg = 'Tell me about ' + value + ' as a ' + stepName + ' choice for my build. Be specific about traits, bonuses, and synergies.';
+    askAIMsg(stepIdx, stepName, msg, false);
+  }
+}
+
+// â”€â”€ AI CHAT â”€â”€
+function addMsg(stepIdx, text, role) {
+  const box = document.getElementById('chat-' + stepIdx);
+  if (!box) return null;
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + role;
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+async function askAIMsg(stepIdx, stepName, message, showUserMsg) {
+  if (showUserMsg !== false) addMsg(stepIdx, message, 'user');
+  const thinking = addMsg(stepIdx, '...thinking...', 'thinking');
+  syncBuild();
+
+  if (OLLAMA_OK) {
+    try {
+      const res = await fetch('/characters/ai_step', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ step:stepName, build:build, message:message })
+      });
+      const data = await res.json();
+      if (thinking) thinking.remove();
+      const reply = data.reply || '[No response]';
+      addMsg(stepIdx, reply, 'dm');
+      speak(reply);
+      return;
+    } catch(e) { /* fall through to offline */ }
+  }
+
+  // Offline fallback â€” browser-only guidance
+  if (thinking) thinking.remove();
+  const offline = getOfflineReply(stepName, message, build);
+  addMsg(stepIdx, offline, 'dm');
+  speak(offline);
+}
+
+function askAI(stepIdx, stepName) {
+  const input = document.getElementById('input-' + stepIdx);
+  if (!input) return;
+  const msg = input.value.trim();
+  if (!msg) return;
+  addMsg(stepIdx, msg, 'user');
+  input.value = '';
+  askAIMsg(stepIdx, stepName, msg, false);
+}
+
+// Enter key on ai inputs
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.ai-input').forEach(function(input, i) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      const steps = ['general','race','class','background','abilities','personality','general'];
+      askAI(i, steps[i] || 'general');
+    });
+  });
+});
+
+// â”€â”€ OFFLINE KNOWLEDGE BASE â”€â”€
+function getOfflineReply(step, message, b) {
+  const race = b.race || 'Human';
+  const cls = b.char_class || 'Fighter';
+  const bg = b.background || 'Soldier';
+  const offlineData = {
+    race: {
+      'Human':'Humans are the most versatile race â€” they gain plus one to every ability score. This makes them excellent for any class, especially multi-stat classes like Paladin or Ranger.',
+      'Elf (High)':'High Elves gain plus two Dexterity and plus one Intelligence, darkvision, and a free cantrip from the Wizard spell list. They excel as Wizards, Fighters (Eldritch Knight), or Rogues.',
+      'Dwarf (Hill)':'Hill Dwarves gain plus two Constitution, plus one Wisdom, darkvision, and Dwarven Toughness â€” an extra hit point per level. Excellent Clerics and tanky Fighters.',
+      'Dwarf (Mountain)':'Mountain Dwarves gain plus two Constitution AND plus two Strength â€” unusual double bonus. Perfect for heavy armor classes: Fighter, Paladin, Barbarian.',
+      'Half-Orc':'Half-Orcs gain plus two Strength, plus one Constitution, and Relentless Endurance â€” once per long rest, drop to 1 HP instead of 0. Outstanding Barbarians and Fighters.',
+      'Halfling (Lightfoot)':'Halflings gain plus two Dexterity, plus one Charisma, and the Lucky trait â€” reroll any 1 you roll on an attack, ability check, or saving throw. Exceptional Rogues and Bards.',
+      'Tiefling':'Tieflings gain plus two Charisma, plus one Intelligence, resistance to fire, and innate spellcasting. Natural Warlocks, Sorcerers, and Bards.',
+    },
+    class: {
+      'Fighter':'Fighters use d10 hit dice, wear any armor, and can fight with Strength or Dexterity. At level 1 they choose a Fighting Style and gain Second Wind â€” heal 1d10 plus level as a bonus action. Primary stats: STR or DEX, then CON.',
+      'Wizard':'Wizards use d6 hit dice and INT for spellcasting. They are fragile but incredibly powerful. At level 1 they have a spellbook and can cast spells like Magic Missile and Shield. Primary stats: INT first, then CON, then DEX.',
+      'Rogue':'Rogues use d8 hit dice and DEX for most abilities. Sneak Attack adds bonus damage when you have advantage or an ally nearby. Cunning Action lets you dash, disengage, or hide as a bonus action. Primary stats: DEX, then CON or INT.',
+      'Cleric':'Clerics use d8 hit dice and WIS for spellcasting. They can wear armor and fight while casting healing and support spells. At level 1 they choose a Divine Domain that shapes their power. Primary stats: WIS, then CON, then STR.',
+      'Barbarian':'Barbarians use d12 hit dice â€” the highest in the game. Rage gives bonus damage, resistance to physical damage, and advantage on STR checks. Unarmored Defense: AC equals 10 plus DEX plus CON. Primary stats: STR and CON.',
+      'Paladin':'Paladins use d10 hit dice and need both STR and CHA. Lay on Hands heals 5 HP per level per day. Divine Smite spends spell slots for massive burst damage. Primary stats: STR, then CHA, then CON.',
+    }
+  };
+  const stepData = offlineData[step] || {};
+  const msg = message.toLowerCase();
+  for (const [key, val] of Object.entries(stepData)) {
+    if (msg.includes(key.toLowerCase()) || (step === 'race' && race === key) || (step === 'class' && cls === key)) {
+      return val;
+    }
+  }
+  // Generic replies by step
+  const generic = {
+    general: 'Welcome! Build your character step by step. Name them, choose your race for ability bonuses, pick a class for your role in the party, select a background for skills, then assign ability scores using the standard array: 15, 14, 13, 12, 10, 8.',
+    race: 'Each race gives ability score bonuses and special traits. For a ' + cls + ', prioritize races that boost your primary stats. Click any race card for details about that specific race.',
+    class: 'Your class determines your combat role and abilities. As a ' + race + ', you have ' + (race.includes('Elf') ? 'Dexterity' : race.includes('Dwarf') ? 'Constitution' : 'versatile') + ' bonuses â€” consider how that pairs with each class.',
+    background: 'Your background gives two skill proficiencies and a special feature. Choose one that fills gaps in your class skill list or fits your character story.',
+    abilities: 'For a ' + cls + ', place your highest score (15) in your primary stat. Fighters want STR or DEX. Wizards want INT. Clerics want WIS. Rogues want DEX. Always keep CON reasonably high â€” it affects your HP.',
+    personality: 'Your ' + race + ' ' + cls + ' with a ' + bg + ' background has a rich story to tell. Consider what drove them to adventure, who they left behind, and what moral code guides them.',
+  };
+  return generic[step] || generic.general;
+}
+
+// â”€â”€ ABILITY SCORES â”€â”€
+function updateMod(stat) {
+  const input = document.getElementById('score-' + stat);
+  const modEl = document.getElementById('mod-' + stat);
+  if (!input || !modEl) return;
+  const score = parseInt(input.value) || 10;
+  const mod = Math.floor((score - 10) / 2);
+  modEl.textContent = (mod >= 0 ? '+' : '') + mod;
+  build[stat] = score;
+}
+
+function applyStandardArray() {
+  const order = ['strength','dexterity','constitution','intelligence','wisdom','charisma'];
+  [15,14,13,12,10,8].forEach(function(val, i) {
+    const el = document.getElementById('score-' + order[i]);
+    if (el) { el.value = val; updateMod(order[i]); }
+  });
+}
+
+function showRacialBonuses() {
+  const bonuses = RACIAL_BONUSES[build.race] || {};
+  const note = document.getElementById('racial-bonus-note');
+  if (!note) return;
+  const parts = Object.entries(bonuses).map(function(e){ return '+' + e[1] + ' ' + e[0].toUpperCase(); });
+  note.textContent = parts.length ? (build.race + ' racial bonuses (applied on save): ' + parts.join(', ')) : '';
+}
+
+function getStatRec() {
+  const msg = 'Recommend exactly how to assign the standard array (15,14,13,12,10,8) to STR, DEX, CON, INT, WIS, CHA for a ' + build.race + ' ' + build.char_class + '. List each assignment explicitly.';
+  askAIMsg(4, 'abilities', msg, false);
+}
+
+function getPersonality() {
+  const msg = 'Generate a Personality Trait, Ideal, Bond, and Flaw for a ' + build.race + ' ' + build.char_class + ' with a ' + build.background + ' background. Label each clearly: TRAIT:, IDEAL:, BOND:, FLAW:';
+  askAIMsg(5, 'personality', msg, false);
+}
+
+// â”€â”€ BUILD SYNC & SUMMARY â”€â”€
+function syncBuild() {
+  const nameEl = document.getElementById('field-name');
+  if (nameEl) build.name = nameEl.value;
+  const lvlEl = document.getElementById('field-level');
+  if (lvlEl) build.level = lvlEl.value;
+  const alnEl = document.getElementById('field-alignment');
+  if (alnEl) build.alignment = alnEl.value;
+  ['strength','dexterity','constitution','intelligence','wisdom','charisma'].forEach(function(s) {
+    const el = document.getElementById('score-' + s);
+    if (el) build[s] = parseInt(el.value) || 10;
+  });
+}
+
+function renderBuildSummary() {
+  syncBuild();
+  const el = document.getElementById('build-summary');
+  if (!el) return;
+  const stats = ['strength','dexterity','constitution','intelligence','wisdom','charisma'];
+  const abbr  = ['STR','DEX','CON','INT','WIS','CHA'];
+  const statRow = stats.map(function(s, i) {
+    const val = parseInt(build[s] || 10);
+    const mod = Math.floor((val - 10) / 2);
+    return '<span style="margin-right:10px"><strong style="color:var(--gold)">' + abbr[i] + '</strong> ' + val + ' <span style="color:var(--text-dim)">(' + (mod >= 0 ? '+' : '') + mod + ')</span></span>';
+  }).join('');
+  el.innerHTML = '<div style="margin-bottom:6px"><strong style="color:var(--gold-light);font-size:16px">' + (build.name || 'Unnamed') + '</strong></div>' +
+    '<div style="color:var(--text-dim);margin-bottom:8px">' + (build.race||'â€”') + ' ' + (build.char_class||'â€”') + ' Â· Level ' + build.level + ' Â· ' + (build.background||'â€”') + ' Â· ' + (build.alignment||'â€”') + '</div>' +
+    '<div style="font-size:13px">' + statRow + '</div>';
+  const finalMsg = 'Your ' + (build.race||'') + ' ' + (build.char_class||'') + ' named ' + (build.name||'your character') + ' is ready to finalize. Ask me about starting equipment, spells, or what to expect in your first session!';
+  const box = document.getElementById('chat-6');
+  if (box && box.children.length === 0) {
+    addMsg(6, finalMsg, 'dm');
+    speak(finalMsg);
+  }
+}
+
+// â”€â”€ TEMPLATE PRELOAD â”€â”€
+function applyPreload() {
+  if (!PRELOAD) return;
+  function setVal(id, val) { const el = document.getElementById(id); if (el && val != null) el.value = val; }
+  function selectCard(gridId, fieldId, value) {
+    if (!value) return;
+    document.querySelectorAll('#' + gridId + ' .choice-card').forEach(function(c){ c.classList.remove('selected'); });
+    const card = document.querySelector('#' + gridId + ' [data-name="' + value + '"]');
+    if (card) { card.classList.add('selected'); }
+    const field = document.getElementById(fieldId);
+    if (field) field.value = value;
+    build[fieldId.replace('field-','')] = value;
+  }
+  setVal('field-level', PRELOAD.level);
+  setVal('field-alignment', PRELOAD.alignment);
+  selectCard('race-grid', 'field-race', PRELOAD.race);
+  selectCard('class-grid', 'field-char_class', PRELOAD.char_class);
+  selectCard('bg-grid', 'field-background', PRELOAD.background);
+  ['strength','dexterity','constitution','intelligence','wisdom','charisma'].forEach(function(s) {
+    if (PRELOAD[s]) { const el = document.getElementById('score-'+s); if (el) { el.value = PRELOAD[s]; updateMod(s); } }
+  });
+  if (PRELOAD.traits) {
+    setVal('field-personality_trait', PRELOAD.traits.personality);
+    setVal('field-ideal', PRELOAD.traits.ideal);
+    setVal('field-bond', PRELOAD.traits.bond);
+    setVal('field-flaw', PRELOAD.traits.flaw);
+  }
+  if (PRELOAD.notes) setVal('field-notes', PRELOAD.notes);
+
+  // Show banner
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:rgba(201,168,76,0.1);border:1px solid var(--border-gold);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:14px;color:var(--gold)';
+  banner.innerHTML = 'ðŸ“‹ <strong>Template loaded!</strong> All fields pre-filled. Just enter a name and adjust anything.';
+  const form = document.getElementById('char-form');
+  if (form) form.insertBefore(banner, form.firstChild);
+}
+
+// â”€â”€ INIT â”€â”€
+document.addEventListener('DOMContentLoaded', function() {
+  // Pre-select defaults
+  function preSelect(gridId, value) {
+    const card = document.querySelector('#' + gridId + ' [data-name="' + value + '"]');
+    if (card) card.classList.add('selected');
+  }
+  preSelect('race-grid', 'Human');
+  preSelect('class-grid', 'Fighter');
+  preSelect('bg-grid', 'Soldier');
+  ['strength','dexterity','constitution','intelligence','wisdom','charisma'].forEach(updateMod);
+  applyPreload();
+  // Trigger step 0 intro after voices load
+  setTimeout(function() {
+    const intro = STEP_INTROS[0];
+    addMsg(0, intro, 'dm');
+    speak(intro);
+  }, 600);
+});
+</script>
+{% endblock %}

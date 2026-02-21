@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}DM Dashboard — CharacterForge{% endblock %}
+{% block content %}
+<div class="flex justify-between" style="margin-bottom:8px">
+  <div>
+    <h1>Dungeon Master</h1>
+    <p class="subtitle">Your campaigns and realms await.</p>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="openModal('modal-create-campaign')">+ New Campaign</button>
+</div>
+
+{% if campaigns %}
+  <div class="cards-grid">
+    {% for c in campaigns %}
+    <a href="/campaigns/{{ c.id }}" class="campaign-card">
+      <div class="campaign-card-name">{{ c.name }}</div>
+      <div class="campaign-card-desc">{{ c.description or 'No description yet.' }}</div>
+      <div class="campaign-card-meta">
+        <span>⚔ {{ c.characters | rejectattr('is_npc') | list | length }} PCs</span>
+        <span>👥 {{ c.memberships | selectattr('approved') | list | length }} members</span>
+      </div>
+      <div style="margin-top:12px">
+        <form method="post" action="/dm/campaigns/{{ c.id }}/delete" class="confirm-action" data-confirm="Delete campaign '{{ c.name }}'?" style="display:inline" onclick="event.stopPropagation()">
+          <button type="submit" class="btn btn-sm btn-danger">Delete Campaign</button>
+        </form>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="panel" style="text-align:center;padding:48px">
+    <div style="font-size:48px;margin-bottom:12px">🗺</div>
+    <h2>No Campaigns Yet</h2>
+    <p class="text-dim" style="margin:8px 0 20px">Create your first campaign to get started.</p>
+    <button class="btn btn-primary" onclick="openModal('modal-create-campaign')">Create Campaign</button>
+  </div>
+{% endif %}
+
+<!-- Create Campaign Modal -->
+<div class="modal-overlay" id="modal-create-campaign">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-create-campaign')">✕</button>
+    <h2>New Campaign</h2>
+    <form method="post" action="/dm/campaigns/create">
+      <label>Campaign Name</label>
+      <input type="text" name="name" required placeholder="e.g. Curse of Strahd" autofocus>
+      <label>Description</label>
+      <textarea name="description" placeholder="A brief description of your campaign..."></textarea>
+      <button type="submit" class="btn btn-primary">Create Campaign</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

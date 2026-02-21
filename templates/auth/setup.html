@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CharacterForge — First Launch Setup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-box">
+    <div class="login-title">⚔ CharacterForge</div>
+    <div class="login-sub">First Launch — Create Your Admin Account</div>
+
+    <div class="flash flash-ok" style="margin-bottom:16px">
+      No admin account exists yet. Set up your master administrator now.
+    </div>
+
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}
+        {% for cat, msg in msgs %}
+          <div class="flash flash-{{ cat }}" style="margin-bottom:12px">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="/auth/setup">
+      <label>Admin Username</label>
+      <input type="text" name="username" required autofocus placeholder="e.g. admin">
+
+      <label>Display Name</label>
+      <input type="text" name="display_name" placeholder="e.g. The Dungeon Master">
+
+      <label>Password</label>
+      <input type="password" name="password" required placeholder="At least 6 characters">
+
+      <label>Confirm Password</label>
+      <input type="password" name="confirm" required placeholder="Repeat password">
+
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:20px">
+        Create Admin & Enter
+      </button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
