@@ -44,3 +44,5 @@ secrets/
 # Runtime sessions
 data/sessions/
 
+_backups/
+routes/*.bak.*
