@@ -29,7 +29,7 @@ def dashboard():
 def create_user():
     if not _require_admin():
         return redirect(url_for("auth.login_get"))
-    username = (request.form.get("username") or "").strip()
+    username = (request.form.get("username") or "").strip().casefold()
     password = (request.form.get("password") or "").strip()
     role = (request.form.get("role") or "player").strip()
     display = (request.form.get("display_name") or username).strip()
