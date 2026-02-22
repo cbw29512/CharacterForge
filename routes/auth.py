@@ -36,7 +36,10 @@ def ensure_default_accounts() -> None:
     for uname, pw, role, display in DEFAULT_ACCOUNTS:
         u = _get_user_ci(uname)
         if not u:
-            u = User(username=uname, password_hash=hash_password(pw), role=role, display_name=display)
+            u_kwargs = dict(username=uname, password_hash=hash_password(pw), role=role)
+            if hasattr(User, "display_name"):
+                u_kwargs["display_name"] = display
+            u = User(**u_kwargs)
             db.session.add(u)
             changed = True
             continue
@@ -106,13 +109,15 @@ def setup_post():
 
 @auth_bp.get("/login")
 def login_get():
+    ensure_default_accounts()
     if _first_launch():
         return redirect(url_for("auth.setup_get"))
     return render_template("auth/login.html")
 
 @auth_bp.post("/login")
 def login_post():
-    username = (request.form.get("username") or "").strip()
+    ensure_default_accounts()
+    username = (request.form.get("username") or "").strip().casefold()
     password = (request.form.get("password") or "").strip()
     role_hint = (request.form.get("role") or "").strip().casefold()
     if not username or not password:
