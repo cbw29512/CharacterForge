@@ -26,10 +26,12 @@ def _get_user_ci(username: str):
     u = _norm_username(username)
     if not u:
         return None
+    # Use exact match first (most efficient)
     exact = User.query.filter_by(username=u).first()
     if exact:
         return exact
-    return User.query.filter(func.lower(User.username) == u.lower()).order_by(User.id.asc()).first()
+    # If no exact match, try case-insensitive but ensure deterministic results
+    return User.query.filter(func.lower(User.username) == func.lower(u)).order_by(User.id.asc()).first()
 
 def ensure_default_accounts() -> None:
     changed = False
