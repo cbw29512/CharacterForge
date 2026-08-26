@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 
-from flask import Blueprint, flash, redirect, request, session, url_for
+from flask import Blueprint, flash, jsonify, redirect, request, session, url_for
 
 from db import db
 from models import CampaignMembership, Character
@@ -45,6 +45,27 @@ def _authorized_for_campaign(campaign_id: int | None, user_id: int, role: str) -
         approved=True,
     ).first()
     return membership is not None
+
+
+@character_fixes_bp.get("/characters/class_info")
+def class_info():
+    """Expose only the SRD class fields needed by the browser UI."""
+    if not session.get("user_id"):
+        return jsonify({"error": "Not logged in"}), 401
+    name = (request.args.get("class") or "").strip()
+    data = _lookup(srd_service.SRD_CLASSES, name)
+    if not data:
+        return jsonify({"error": "Unknown class"}), 404
+    return jsonify({
+        "name": data["name"],
+        "hit_die": data.get("hit_die"),
+        "primary_ability": data.get("primary_ability"),
+        "skill_choices": data.get("skill_choices", []),
+        "num_skills": data.get("num_skills", 0),
+        "saving_throws": data.get("saving_throws", []),
+        "armor_proficiencies": data.get("armor_proficiencies", []),
+        "weapon_proficiencies": data.get("weapon_proficiencies", []),
+    })
 
 
 @character_fixes_bp.post("/characters/create_v2")
