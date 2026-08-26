@@ -52,5 +52,7 @@
 
   <script src="/static/js/app.js"></script>
   {% block scripts %}{% endblock %}
+  <!-- Runs after page-specific scripts so it can safely enhance the wizard/sheet. -->
+  <script src="/static/js/ui-fixes.js"></script>
 </body>
 </html>

@@ -1,11 +1,16 @@
 from __future__ import annotations
 import os
+import logging
 from flask import Flask, redirect, url_for, session
 from flask_session import Session
 from config import Config
 from db import db
 
+logger = logging.getLogger(__name__)
+
+
 def create_app() -> Flask:
+    """Create and configure the CharacterForge Flask application."""
     app = Flask(__name__)
     app.config.from_object(Config)
 
@@ -23,6 +28,7 @@ def create_app() -> Flask:
     from routes.campaigns import campaigns_bp
     from routes.characters import characters_bp
     from routes.templates import templates_bp
+    from routes.character_fixes import character_fixes_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
@@ -31,6 +37,9 @@ def create_app() -> Flask:
     app.register_blueprint(campaigns_bp)
     app.register_blueprint(characters_bp)
     app.register_blueprint(templates_bp)
+    # New character-creation endpoint is isolated from the legacy endpoint so
+    # the existing application remains available while the wizard is hardened.
+    app.register_blueprint(character_fixes_bp)
 
     @app.get("/")
     def home():
@@ -45,9 +54,14 @@ def create_app() -> Flask:
 
     return app
 
+
 if __name__ == "__main__":
     app = create_app()
     port = int(os.getenv("FLASK_PORT", "5050"))
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception:
+            logger.exception("Failed to initialize database tables")
+            raise
     app.run(host="127.0.0.1", port=port, debug=True)
