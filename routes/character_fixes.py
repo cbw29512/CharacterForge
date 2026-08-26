@@ -56,11 +56,15 @@ def class_info():
     data = _lookup(srd_service.SRD_CLASSES, name)
     if not data:
         return jsonify({"error": "Unknown class"}), 404
+
+    skill_choices = data.get("skill_choices", [])
+    skill_options = [entry["name"] for entry in srd_service.ALL_SKILLS] if "Any" in skill_choices else skill_choices
     return jsonify({
         "name": data["name"],
         "hit_die": data.get("hit_die"),
         "primary_ability": data.get("primary_ability"),
-        "skill_choices": data.get("skill_choices", []),
+        "skill_choices": skill_choices,
+        "skill_options": skill_options,
         "num_skills": data.get("num_skills", 0),
         "saving_throws": data.get("saving_throws", []),
         "armor_proficiencies": data.get("armor_proficiencies", []),
@@ -160,6 +164,11 @@ def create_v2():
             invalid = [s for s in selected if s not in allowed_skills]
             if invalid:
                 raise ValueError("One or more selected class skills are not valid for this class.")
+        else:
+            valid_skill_names = {entry["name"] for entry in srd_service.ALL_SKILLS}
+            invalid = [s for s in selected if s not in valid_skill_names]
+            if invalid:
+                raise ValueError("One or more selected class skills are invalid.")
         if len(selected) != int(class_info.get("num_skills", 0)):
             raise ValueError(
                 f"{class_name} requires exactly {class_info.get('num_skills', 0)} class skill choices."
