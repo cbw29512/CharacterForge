@@ -58,13 +58,17 @@ def class_info():
         return jsonify({"error": "Unknown class"}), 404
 
     skill_choices = data.get("skill_choices", [])
-    skill_options = [entry["name"] for entry in srd_service.ALL_SKILLS] if "Any" in skill_choices else skill_choices
+    # Bard's SRD entry says "any three". The browser needs concrete options,
+    # while the stored class data can continue to say "Any" as the source truth.
+    browser_skills = (
+        [entry["name"] for entry in srd_service.ALL_SKILLS]
+        if "Any" in skill_choices else skill_choices
+    )
     return jsonify({
         "name": data["name"],
         "hit_die": data.get("hit_die"),
         "primary_ability": data.get("primary_ability"),
-        "skill_choices": skill_choices,
-        "skill_options": skill_options,
+        "skill_choices": browser_skills,
         "num_skills": data.get("num_skills", 0),
         "saving_throws": data.get("saving_throws", []),
         "armor_proficiencies": data.get("armor_proficiencies", []),
@@ -160,12 +164,12 @@ def create_v2():
         selected = list(dict.fromkeys(
             s.strip() for s in form.get("class_skills", "").split(",") if s.strip()
         ))
+        valid_skill_names = {entry["name"] for entry in srd_service.ALL_SKILLS}
         if "Any" not in allowed_skills:
             invalid = [s for s in selected if s not in allowed_skills]
             if invalid:
                 raise ValueError("One or more selected class skills are not valid for this class.")
         else:
-            valid_skill_names = {entry["name"] for entry in srd_service.ALL_SKILLS}
             invalid = [s for s in selected if s not in valid_skill_names]
             if invalid:
                 raise ValueError("One or more selected class skills are invalid.")
@@ -175,7 +179,6 @@ def create_v2():
             )
 
         background_skills = set(background.get("skill_proficiencies", []))
-        valid_skill_names = {entry["name"] for entry in srd_service.ALL_SKILLS}
         skills = {
             name: True
             for name in background_skills | set(selected)
