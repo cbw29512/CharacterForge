@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import logging
 
-from flask import Blueprint, current_app, flash, redirect, request, session, url_for
+from flask import Blueprint, flash, redirect, request, session, url_for
 
 from db import db
-from models import Campaign, CampaignMembership, Character
+from models import CampaignMembership, Character
 from services import srd_service
 
 logger = logging.getLogger(__name__)
@@ -23,11 +23,22 @@ def _score(form, key: str) -> int:
         return 10
 
 
+def _ability_modifier(score: int) -> int:
+    return (score - 10) // 2
+
+
+def _proficiency_bonus(level: int) -> int:
+    return 2 + max(0, (level - 1) // 4)
+
+
+def _lookup(items: list[dict], name: str) -> dict | None:
+    return next((item for item in items if item.get("name") == name), None)
+
+
 def _authorized_for_campaign(campaign_id: int | None, user_id: int, role: str) -> bool:
     """Prevent a character from being silently attached to an unrelated campaign."""
     if campaign_id is None or role in ("admin", "dm"):
         return True
-
     membership = CampaignMembership.query.filter_by(
         campaign_id=campaign_id,
         user_id=user_id,
@@ -36,17 +47,9 @@ def _authorized_for_campaign(campaign_id: int | None, user_id: int, role: str) -
     return membership is not None
 
 
-def _class_skill_names(class_info: dict) -> list[str]:
-    return list(class_info.get("skill_choices", []))
-
-
 @character_fixes_bp.post("/characters/create_v2")
 def create_v2():
-    """Create a character with validated race bonuses and class skill choices.
-
-    This endpoint deliberately lives beside the legacy creator. That lets us
-    harden the wizard without replacing the working legacy route in-place.
-    """
+    """Create a character with validated 2014 SRD-derived build data."""
     if not session.get("user_id"):
         flash("Please log in.", "error")
         return redirect(url_for("auth.login_get"))
@@ -61,7 +64,7 @@ def create_v2():
             flash("You are not approved to place a character in that campaign.", "error")
             return redirect(url_for("player.dashboard"))
 
-        is_npc = (form.get("is_npc", "false").lower() == "true")
+        is_npc = form.get("is_npc", "false").lower() == "true"
         if is_npc and role not in ("dm", "admin"):
             flash("Only DMs and Admins can create NPCs.", "error")
             return redirect(url_for("auth.login_get"))
@@ -72,14 +75,14 @@ def create_v2():
         alignment = form.get("alignment", "True Neutral")
         level = max(1, min(20, int(form.get("level", 1) or 1)))
 
-        race = srd_service.get_race(race_name)
-        class_info = srd_service.get_class(class_name)
-        background = srd_service.get_background(background_name)
+        race = _lookup(srd_service.SRD_RACES, race_name)
+        class_info = _lookup(srd_service.SRD_CLASSES, class_name)
+        background = _lookup(srd_service.SRD_BACKGROUNDS, background_name)
         if not race or not class_info or not background:
             raise ValueError("The selected race, class, or background is not in the SRD data set.")
 
-        # Start from the values entered in the wizard, then apply the selected
-        # race's 2014-style ability bonuses exactly once.
+        # Wizard values are base scores. Apply the selected race's 2014 bonuses
+        # exactly once here, at persistence time, so the stored character is usable.
         scores = {
             "strength": _score(form, "strength"),
             "dexterity": _score(form, "dexterity"),
@@ -94,12 +97,12 @@ def create_v2():
 
         hit_die = class_info.get("hit_die", "d8")
         hit_die_value = int(hit_die[1:])
-        con_mod = srd_service.ability_modifier(scores["constitution"])
-        dex_mod = srd_service.ability_modifier(scores["dexterity"])
-        proficiency = srd_service.proficiency_bonus(level)
+        con_mod = _ability_modifier(scores["constitution"])
+        dex_mod = _ability_modifier(scores["dexterity"])
+        proficiency = _proficiency_bonus(level)
 
-        # Standard 5e hit-point progression: maximum hit die + CON at level 1,
-        # then the class's fixed average + CON for each later level.
+        # 2014 fixed-average HP progression: max die at level 1, then the
+        # class's fixed average (half die + 1) for every later level.
         max_hp = max(1, hit_die_value + con_mod)
         if level > 1:
             max_hp += (level - 1) * (hit_die_value // 2 + 1 + con_mod)
@@ -108,25 +111,30 @@ def create_v2():
         if hp_override:
             try:
                 max_hp = max(1, int(hp_override))
-            except ValueError:
-                raise ValueError("Hit point override must be a whole number.")
+            except ValueError as exc:
+                raise ValueError("Hit point override must be a whole number.") from exc
 
         armor_override = (form.get("armor_class_override") or "").strip()
         if armor_override:
             try:
                 armor_class = max(1, int(armor_override))
-            except ValueError:
-                raise ValueError("Armor Class override must be a whole number.")
+            except ValueError as exc:
+                raise ValueError("Armor Class override must be a whole number.") from exc
         else:
-            # The wizard does not currently model equipped armor selection, so
-            # this is intentionally the unarmored baseline rather than invented gear.
+            # The wizard does not model equipped armor yet. Do not invent gear;
+            # use the correct unarmored baseline and let the player/DM override it.
             armor_class = 10 + dex_mod
 
-        speed = max(0, min(120, int(form.get("speed", race.get("speed", 30)) or race.get("speed", 30))))
+        try:
+            speed = int(form.get("speed", race.get("speed", 30)) or race.get("speed", 30))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Speed must be a whole number.") from exc
+        speed = max(0, min(120, speed))
 
-        allowed_skills = _class_skill_names(class_info)
-        selected_raw = [s.strip() for s in form.get("class_skills", "").split(",") if s.strip()]
-        selected = list(dict.fromkeys(selected_raw))
+        allowed_skills = list(class_info.get("skill_choices", []))
+        selected = list(dict.fromkeys(
+            s.strip() for s in form.get("class_skills", "").split(",") if s.strip()
+        ))
         if "Any" not in allowed_skills:
             invalid = [s for s in selected if s not in allowed_skills]
             if invalid:
@@ -137,15 +145,22 @@ def create_v2():
             )
 
         background_skills = set(background.get("skill_proficiencies", []))
-        skill_names = {entry["name"] for entry in srd_service.ALL_SKILLS}
-        skill_names.update(background_skills)
-        skills = {name: True for name in background_skills | set(selected) if name in skill_names}
+        valid_skill_names = {entry["name"] for entry in srd_service.ALL_SKILLS}
+        skills = {
+            name: True
+            for name in background_skills | set(selected)
+            if name in valid_skill_names
+        }
 
         features: list[str] = []
         for current_level in range(1, level + 1):
             features.extend(class_info.get("features_by_level", {}).get(current_level, []))
-        features.append(f"Armor Proficiencies: {', '.join(class_info.get('armor_proficiencies', [])) or 'None'}")
-        features.append(f"Weapon Proficiencies: {', '.join(class_info.get('weapon_proficiencies', [])) or 'None'}")
+        features.append(
+            f"Armor Proficiencies: {', '.join(class_info.get('armor_proficiencies', [])) or 'None'}"
+        )
+        features.append(
+            f"Weapon Proficiencies: {', '.join(class_info.get('weapon_proficiencies', [])) or 'None'}"
+        )
 
         traits_json = json.dumps({
             "personality": form.get("personality_trait", "").strip(),
