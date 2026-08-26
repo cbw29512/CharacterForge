@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "rulesets": {
+    "2014": {
+      "display_name": "D&D 5e (2014)",
+      "srd": "5.1",
+      "license": "CC-BY-4.0",
+      "official_source": "https://www.dndbeyond.com/srd",
+      "content_status": "migration_required",
+      "categories": [
+        "class",
+        "subclass",
+        "species",
+        "subrace",
+        "background",
+        "feat",
+        "spell",
+        "item",
+        "weapon",
+        "armor",
+        "gear"
+      ]
+    },
+    "2024": {
+      "display_name": "D&D 5e (2024 / 5.5e)",
+      "srd": "5.2.1",
+      "license": "CC-BY-4.0",
+      "official_source": "https://www.dndbeyond.com/srd",
+      "content_status": "migration_required",
+      "categories": [
+        "class",
+        "subclass",
+        "species",
+        "background",
+        "feat",
+        "spell",
+        "item",
+        "weapon",
+        "armor",
+        "gear"
+      ]
+    }
+  },
+  "policy": {
+    "never_mix_rulesets_implicitly": true,
+    "require_explicit_cross_edition_conversion": true,
+    "require_content_source_metadata": true,
+    "allow_user_licensed_content": true,
+    "allow_user_homebrew": true
+  }
+}
