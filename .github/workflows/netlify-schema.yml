@@ -18,6 +18,7 @@ on:
       - 'scripts/netlify_guard_contract.test.mjs'
       - 'scripts/netlify_campaigns_contract.test.mjs'
       - 'scripts/netlify_campaign_view_contract.test.mjs'
+      - 'scripts/netlify_campaign_owner_contract.test.mjs'
       - 'scripts/netlify_characters_contract.test.mjs'
       - 'scripts/netlify_character_frontend_contract.test.mjs'
       - 'scripts/netlify_srd_contract.test.mjs'
@@ -46,6 +47,7 @@ on:
       - 'scripts/netlify_guard_contract.test.mjs'
       - 'scripts/netlify_campaigns_contract.test.mjs'
       - 'scripts/netlify_campaign_view_contract.test.mjs'
+      - 'scripts/netlify_campaign_owner_contract.test.mjs'
       - 'scripts/netlify_characters_contract.test.mjs'
       - 'scripts/netlify_character_frontend_contract.test.mjs'
       - 'scripts/netlify_srd_contract.test.mjs'
@@ -114,6 +116,9 @@ jobs:
 
       - name: Exercise protected campaign view contract
         run: node --test scripts/netlify_campaign_view_contract.test.mjs
+
+      - name: Exercise campaign owner membership immutability
+        run: node --test scripts/netlify_campaign_owner_contract.test.mjs
 
       - name: Exercise protected character read/delete contract
         run: node --test scripts/netlify_characters_contract.test.mjs
