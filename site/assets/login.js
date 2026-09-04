@@ -1,0 +1,3 @@
+import{api,messageFor}from'./api.js';
+const form=document.querySelector('#login-form');const status=document.querySelector('#status');
+form.addEventListener('submit',async event=>{event.preventDefault();status.className='status';status.textContent='Signing in…';const data=new FormData(form);try{await api('/api/auth/login',{method:'POST',body:{username:data.get('username'),password:data.get('password'),role:data.get('role')}});location.assign('/app');}catch(error){if(error.message==='setup_required'){location.assign('/setup');return;}status.className='status error';status.textContent=messageFor(error);}});
