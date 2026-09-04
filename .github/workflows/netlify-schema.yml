@@ -6,6 +6,7 @@ on:
       - 'package.json'
       - 'shared/**'
       - 'services/srd_service.py'
+      - 'routes/characters.py'
       - 'netlify/database/migrations/**'
       - 'netlify/functions/**'
       - 'netlify/lib/**'
@@ -20,6 +21,7 @@ on:
       - 'scripts/netlify_character_create_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - 'tests/test_shared_srd_parity.py'
+      - 'tests/test_character_srd_validation.py'
       - '.github/workflows/netlify-schema.yml'
   push:
     branches: [main]
@@ -27,6 +29,7 @@ on:
       - 'package.json'
       - 'shared/**'
       - 'services/srd_service.py'
+      - 'routes/characters.py'
       - 'netlify/database/migrations/**'
       - 'netlify/functions/**'
       - 'netlify/lib/**'
@@ -41,6 +44,7 @@ on:
       - 'scripts/netlify_character_create_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - 'tests/test_shared_srd_parity.py'
+      - 'tests/test_character_srd_validation.py'
       - '.github/workflows/netlify-schema.yml'
   workflow_dispatch:
 
@@ -65,6 +69,9 @@ jobs:
 
       - name: Shared SRD parity with Flask source
         run: python -m unittest tests.test_shared_srd_parity -v
+
+      - name: Flask character SRD validation contract
+        run: python -m unittest tests.test_character_srd_validation -v
 
       - name: Set up Node
         uses: actions/setup-node@v4
