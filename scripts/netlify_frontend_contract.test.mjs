@@ -47,8 +47,9 @@ test('frontend shell uses Netlify API routes instead of legacy Flask action rout
   const api = await text('_site/js/api.js');
   for (const route of [
     '/api/auth/setup', '/api/auth/login', '/api/auth/me', '/api/auth/logout',
-    '/api/campaigns', '/api/campaigns/browse', '/api/campaigns/join', '/api/campaigns/delete',
-    '/api/characters/create', '/api/characters/delete',
+    '/api/campaigns', '/api/campaigns/browse', '/api/campaigns/members',
+    '/api/campaigns/join', '/api/campaigns/approve', '/api/campaigns/kick', '/api/campaigns/delete',
+    '/api/characters', '/api/characters/create', '/api/characters/delete',
     '/api/templates', '/api/templates/save', '/api/templates/use', '/api/templates/delete',
   ]) assert.equal(api.includes(route), true, `missing ${route}`);
   for (const legacy of ["'/auth/login'", "'/characters/create'", "'/templates/api/list'"]) {
@@ -62,16 +63,31 @@ test('template client sends the exact Function identifier field', async () => {
   assert.doesNotMatch(api, /body: \{ id: templateId \}/);
 });
 
-test('Netlify routing does not rewrite nested API routes to guessed function names', async () => {
+test('Netlify routing and headers are production-restrictive', async () => {
   const config = await text('netlify.toml');
   assert.equal(config.includes('from = "/api/*"'), false);
   assert.match(config, /publish = "_site"/);
   assert.match(config, /functions = "netlify\/functions"/);
+  assert.match(config, /Content-Security-Policy/);
+  for (const directive of [
+    "default-src 'self'",
+    "script-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+  ]) assert.equal(config.includes(directive), true, `missing CSP directive ${directive}`);
+  assert.match(config, /X-Content-Type-Options = "nosniff"/);
+  assert.match(config, /X-Frame-Options = "DENY"/);
 });
 
 test('static shell exposes the migrated application views', async () => {
   const index = await text('_site/index.html');
   for (const id of ['setup-view', 'login-view', 'campaigns-view', 'browse-view', 'characters-view', 'templates-view']) {
     assert.equal(index.includes(`id="${id}"`), true, `missing ${id}`);
+  }
+  for (const id of ['campaign-list', 'browse-list', 'character-list', 'template-list']) {
+    assert.equal(index.includes(`id="${id}"`), true, `missing dashboard surface ${id}`);
   }
 });
