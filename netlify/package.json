@@ -1,0 +1,12 @@
+{
+  "name": "characterforge-netlify-runtime",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit && node tests/schema-contract.mjs"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^4.2.5",
+    "typescript": "^5.9.2"
+  }
+}

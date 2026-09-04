@@ -1,0 +1,32 @@
+name: CharacterForge Netlify Migration Contract
+
+on:
+  pull_request:
+    paths:
+      - 'netlify/**'
+      - '.github/workflows/netlify-migration-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install isolated Netlify runtime dependencies
+        working-directory: netlify
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Compile runtime and validate schema contract
+        working-directory: netlify
+        run: npm run check
