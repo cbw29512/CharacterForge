@@ -110,10 +110,15 @@
     <section id="characters-view" class="app-view" hidden aria-labelledby="characters-title">
       <div class="frontend-heading">
         <div>
-          <h1 id="characters-title">Forge a Character</h1>
-          <p>Build from the same certified SRD catalog used by the backend.</p>
+          <h1 id="characters-title">Characters</h1>
+          <p>View the characters you can access, then forge new ones from the certified SRD catalog.</p>
         </div>
+        <button id="refresh-characters" class="btn" type="button">Refresh</button>
       </div>
+
+      <div id="character-list" class="frontend-grid"></div>
+
+      <h2>Forge a Character</h2>
       <form id="character-create-form" class="frontend-card">
         <div class="frontend-form-grid">
           <div>
