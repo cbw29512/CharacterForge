@@ -34,6 +34,7 @@ Thumbs.db
 node_modules/
 dist/
 build/
+site/build-info.json
 
 # Secrets / local overrides
 .env

@@ -5,6 +5,9 @@ on:
     paths:
       - 'site/**'
       - 'netlify.toml'
+      - 'package.json'
+      - 'scripts/write_netlify_build_info.mjs'
+      - 'scripts/netlify_build_info_contract.test.mjs'
       - 'tests/test_netlify_frontend_contract.py'
       - '.github/workflows/netlify-frontend.yml'
   push:
@@ -12,6 +15,9 @@ on:
     paths:
       - 'site/**'
       - 'netlify.toml'
+      - 'package.json'
+      - 'scripts/write_netlify_build_info.mjs'
+      - 'scripts/netlify_build_info_contract.test.mjs'
       - 'tests/test_netlify_frontend_contract.py'
       - '.github/workflows/netlify-frontend.yml'
   workflow_dispatch:
@@ -36,6 +42,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Verify build provenance contract
+        run: node --test scripts/netlify_build_info_contract.test.mjs
+      - name: Generate exact CI build metadata
+        run: COMMIT_REF="$GITHUB_SHA" BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" CONTEXT="ci" npm run build:netlify
       - name: Install accessibility tooling
         run: npm install --no-save pa11y@10.0.0
       - name: Start static site
@@ -47,6 +57,9 @@ jobs:
           done
           cat /tmp/cf-static.log
           exit 1
+      - name: Verify served build provenance
+        run: |
+          node -e "fetch('http://127.0.0.1:4174/build-info.json').then(r=>r.json()).then(v=>{if(v.commit!==process.env.GITHUB_SHA||v.context!=='ci')process.exit(1);console.log(v)})"
       - name: WCAG audit static frontend
         run: |
           npx pa11y --config .pa11y.json http://127.0.0.1:4174/index.html

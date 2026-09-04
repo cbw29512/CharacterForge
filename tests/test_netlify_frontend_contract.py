@@ -10,8 +10,11 @@ SITE = ROOT / "site"
 class NetlifyFrontendContractTests(unittest.TestCase):
     def test_publish_surface_and_security_headers_are_explicit(self):
         config = (ROOT / "netlify.toml").read_text(encoding="utf-8")
+        ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn('command = "npm run build:netlify"', config)
         self.assertIn('publish = "site"', config)
         self.assertIn('functions = "netlify/functions"', config)
+        self.assertIn('site/build-info.json', ignore)
         self.assertIn("default-src 'self'", config)
         self.assertIn("object-src 'none'", config)
         self.assertIn("frame-ancestors 'none'", config)
