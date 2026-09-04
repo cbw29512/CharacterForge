@@ -1,6 +1,7 @@
 import type { Config } from '@netlify/functions';
 
 import { canDeleteCharacter, canViewCharacter } from '../lib/character-access.mts';
+import { canSaveCharacterAsTemplate } from '../lib/template-access.mts';
 import { requireSession } from '../lib/guard.mts';
 import { json } from '../lib/http.mts';
 import { getPool } from '../lib/pg.mts';
@@ -30,8 +31,11 @@ export default async function characters(request: Request): Promise<Response> {
     const character = result.rows[0];
     if (!character) return json({ error: 'not_found' }, 404);
     if (!(await canViewCharacter(auth.session, character))) return json({ error: 'forbidden' }, 403);
-    const canDelete = await canDeleteCharacter(auth.session, character);
-    return json({ character, can_delete: canDelete });
+    const [canDelete, canSaveTemplate] = await Promise.all([
+      canDeleteCharacter(auth.session, character),
+      canSaveCharacterAsTemplate(auth.session, character),
+    ]);
+    return json({ character, can_delete: canDelete, can_save_template: canSaveTemplate });
   } catch (error) {
     console.error('CharacterForge character read failed', error instanceof Error ? error.name : 'unknown_error');
     return json({ error: 'service_unavailable' }, 503);
