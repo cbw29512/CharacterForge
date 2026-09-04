@@ -1,0 +1,38 @@
+name: CharacterForge Netlify Operations
+
+on:
+  pull_request:
+    paths:
+      - 'netlify.toml'
+      - 'netlify/lib/pg.mts'
+      - 'docs/NETLIFY_OPERATIONS.md'
+      - 'docs/NETLIFY_MIGRATION.md'
+      - 'tests/test_netlify_operational_contract.py'
+      - '.github/workflows/**'
+  push:
+    branches: [main]
+    paths:
+      - 'netlify.toml'
+      - 'netlify/lib/pg.mts'
+      - 'docs/NETLIFY_OPERATIONS.md'
+      - 'docs/NETLIFY_MIGRATION.md'
+      - 'tests/test_netlify_operational_contract.py'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  operational-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify production isolation and recovery policy
+        run: python -m unittest tests.test_netlify_operational_contract -v

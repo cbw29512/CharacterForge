@@ -4,22 +4,81 @@ CharacterForge is a tabletop RPG character-management and printable-sheet projec
 
 ## Current status
 
-**Public repository / hardened Flask reference implementation / not yet production-deployed.** The current Flask application has passed its security, authorization, rendered-accessibility, authenticated-browser, mobile-overflow, and printable-PDF regression gates. The next phase is a deliberate Netlify-native backend migration rather than deploying the Flask server unchanged.
+**Public repository / Netlify-native migration substantially complete / not yet production-deployed.**
 
-## Current architecture
+The hardened Flask application remains the behavioral reference implementation. The Netlify target now has versioned Postgres migrations, server-side authentication/session handling, campaign and membership APIs, character and SRD-backed builder flows, reusable templates, admin/user-management parity, a modular static frontend, Letter print behavior, 390px mobile protection, WCAG regression coverage, exact-build provenance, and a verification-only production smoke checker.
+
+Production provisioning is intentionally still pending. CharacterForge will not spend production deploy credits to discover failures that local database tests, CI, browser checks, or a controlled Deploy Preview can catch first.
+
+## Architecture
+
+### Netlify production target
+
+- Netlify-hosted static frontend
+- Netlify Functions on Node 24
+- Netlify Database / Postgres
+- versioned migrations under `netlify/database/migrations/`
+- opaque server-side sessions with secure host-only cookies
+- CSRF protection on state-changing browser requests
+- role and ownership authorization for admin, DM, and player workflows
+- browser-based Letter character-sheet printing
+- exact-commit build provenance and manual production smoke verification
+
+### Hardened Flask reference
 
 - Python / Flask application factory (`app.py`)
 - Flask-SQLAlchemy persistence
 - Flask-Session server-side sessions
 - Blueprints for auth, admin, DM, player, campaigns, characters, and templates
-- Optional Ollama integration for local AI-assisted features
-- Printable character sheets
+- optional local Ollama integration
+- printable character sheets
 
-## Local development
+The Flask implementation remains the regression reference during cutover; it is not the planned Netlify production backend.
+
+## Verified Netlify feature surface
+
+Current local/CI contracts cover:
+
+- first-admin bootstrap with no seeded/default account
+- login, logout, secure cookies, CSRF, and durable server-side sessions
+- case-insensitive usernames and password policy
+- campaign create/list/browse/join/approve/kick/delete flows
+- campaign owner membership immutability
+- character visibility, creation, deletion, and campaign authorization
+- shared SRD catalog parity and character math
+- reusable character/NPC templates
+- admin overview and user creation
+- transactional role changes with last-admin and campaign-owner safeguards
+- password reset with active-session revocation
+- user deletion with self-delete, last-admin, and owned-campaign protection
+- nine-page static frontend WCAG coverage
+- nine-page 390px horizontal-overflow regression
+- Letter print-media/PDF regression
+- production security-header verification contract
+- exact deployed-SHA verification contract
+- read-only database health verification
+- no automatic production deploy path
+- no automatic database restore path
+
+## Operational guardrails
+
+CharacterForge uses Netlify Database branching as the intended preview/prod isolation boundary. Production deploys must be the only context with access to the main production database; Deploy Previews use isolated database branches.
+
+Repository policy forbids committing or manually injecting a production `NETLIFY_DB_URL` into preview/CI configuration. Database restore remains a manual Team Owner recovery action and is never triggered from GitHub Actions or application code.
+
+See:
+
+- `docs/NETLIFY_MIGRATION.md` — migration Definition of Done and cutover state
+- `docs/NETLIFY_OPERATIONS.md` — preview isolation, environment, backup, restore, and cutover runbook
+- `docs/NETLIFY_PRODUCTION_READINESS.md` — production readiness criteria
+- `docs/NETLIFY_DEPLOY_CHECKLIST.md` — deliberate first-deploy checklist
+- `docs/NETLIFY_PRODUCTION_SMOKE.md` — exact-SHA production verification
+
+## Local Flask development
 
 Use Python 3.12 and create a virtual environment. Never reuse example credentials from documentation.
 
-Create a `.env` file with your own values:
+Create a `.env` file with your own local values:
 
 ```text
 SECRET_KEY=<generate-a-long-random-secret>
@@ -29,27 +88,7 @@ FLASK_ENV=development
 FLASK_PORT=5050
 ```
 
-See `CharacterForge_SETUP_GUIDE.md` for the current Windows-oriented setup notes.
-
-## Quality gate
-
-The hardened Flask implementation currently verifies:
-
-- no default or committed production credentials
-- strict session-secret configuration
-- authentication and authorization regression coverage
-- CSRF/session/security-header behavior
-- 29 Python/security regression tests
-- rendered WCAG checks for setup, login, role dashboards, campaigns, builder, and character sheet
-- authenticated Chromium desktop/mobile smoke
-- 390px horizontal-overflow regression
-- Letter-size printable-sheet PDF generation and parsed-PDF validation
-
-## Netlify production direction
-
-Netlify's current native Functions runtime does not run Python/Flask applications directly. CharacterForge therefore will not use a fake Flask-on-Netlify wrapper. The planned production direction is a Netlify-native API/runtime with Netlify Database (Postgres), while preserving the proven domain rules and UI behavior from this Flask implementation.
-
-See `docs/NETLIFY_MIGRATION.md` for the migration Definition of Done, state model, boundaries, and sequencing.
+See `CharacterForge_SETUP_GUIDE.md` for the current Windows-oriented Flask setup notes.
 
 ## Safety and rules boundary
 
