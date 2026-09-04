@@ -7,6 +7,7 @@ on:
       - 'shared/**'
       - 'services/srd_service.py'
       - 'routes/characters.py'
+      - 'routes/templates.py'
       - 'netlify/database/migrations/**'
       - 'netlify/functions/**'
       - 'netlify/lib/**'
@@ -19,9 +20,11 @@ on:
       - 'scripts/netlify_characters_contract.test.mjs'
       - 'scripts/netlify_srd_contract.test.mjs'
       - 'scripts/netlify_character_create_contract.test.mjs'
+      - 'scripts/netlify_templates_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - 'tests/test_shared_srd_parity.py'
       - 'tests/test_character_srd_validation.py'
+      - 'tests/test_template_authorization.py'
       - '.github/workflows/netlify-schema.yml'
   push:
     branches: [main]
@@ -30,6 +33,7 @@ on:
       - 'shared/**'
       - 'services/srd_service.py'
       - 'routes/characters.py'
+      - 'routes/templates.py'
       - 'netlify/database/migrations/**'
       - 'netlify/functions/**'
       - 'netlify/lib/**'
@@ -42,9 +46,11 @@ on:
       - 'scripts/netlify_characters_contract.test.mjs'
       - 'scripts/netlify_srd_contract.test.mjs'
       - 'scripts/netlify_character_create_contract.test.mjs'
+      - 'scripts/netlify_templates_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - 'tests/test_shared_srd_parity.py'
       - 'tests/test_character_srd_validation.py'
+      - 'tests/test_template_authorization.py'
       - '.github/workflows/netlify-schema.yml'
   workflow_dispatch:
 
@@ -72,6 +78,9 @@ jobs:
 
       - name: Flask character SRD validation contract
         run: python -m unittest tests.test_character_srd_validation -v
+
+      - name: Flask template authorization contract
+        run: python -m unittest tests.test_template_authorization -v
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -107,3 +116,6 @@ jobs:
 
       - name: Exercise SRD-validated character creation contract
         run: node --test scripts/netlify_character_create_contract.test.mjs
+
+      - name: Exercise template ownership and lifecycle contract
+        run: node --test scripts/netlify_templates_contract.test.mjs
