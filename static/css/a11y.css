@@ -1,0 +1,18 @@
+:root {
+  /* WCAG AA-safe muted text on CharacterForge dark surfaces. */
+  --text-dim: #a9a18f;
+}
+
+:focus-visible {
+  outline: 3px solid #e8c56e;
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #e8c56e;
+  outline-offset: 2px;
+}
