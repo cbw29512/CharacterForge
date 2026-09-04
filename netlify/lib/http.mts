@@ -46,18 +46,16 @@ function serializeCookie(name: string, value: string, options: ReturnType<typeof
   return parts.join('; ');
 }
 
-export function authCookieHeaders(token: string, csrf: string) {
-  const headers = new Headers();
-  headers.append('Set-Cookie', serializeCookie(SESSION_COOKIE, token, sessionCookieOptions()));
-  headers.append('Set-Cookie', serializeCookie(CSRF_COOKIE, csrf, csrfCookieOptions()));
-  return headers;
+export function setAuthCookies(response: Response, token: string, csrf: string) {
+  response.headers.append('Set-Cookie', serializeCookie(SESSION_COOKIE, token, sessionCookieOptions()));
+  response.headers.append('Set-Cookie', serializeCookie(CSRF_COOKIE, csrf, csrfCookieOptions()));
+  return response;
 }
 
-export function clearAuthCookieHeaders() {
-  const headers = new Headers();
-  headers.append('Set-Cookie', serializeCookie(SESSION_COOKIE, '', sessionCookieOptions(0)));
-  headers.append('Set-Cookie', serializeCookie(CSRF_COOKIE, '', csrfCookieOptions(0)));
-  return headers;
+export function clearAuthCookies(response: Response) {
+  response.headers.append('Set-Cookie', serializeCookie(SESSION_COOKIE, '', sessionCookieOptions(0)));
+  response.headers.append('Set-Cookie', serializeCookie(CSRF_COOKIE, '', csrfCookieOptions(0)));
+  return response;
 }
 
 export function sessionToken(request: Request) {
