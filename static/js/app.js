@@ -1,5 +1,32 @@
 // CharacterForge — Main JS
 
+// Global CSRF wiring. Flask-WTF validates POST form fields and X-CSRFToken headers.
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+if (csrfToken) {
+  document.querySelectorAll('form').forEach(form => {
+    if ((form.method || 'get').toLowerCase() !== 'post') return;
+    if (form.querySelector('input[name="csrf_token"]')) return;
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'csrf_token';
+    input.value = csrfToken;
+    form.appendChild(input);
+  });
+
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const method = String(init.method || 'GET').toUpperCase();
+    const rawUrl = typeof input === 'string' ? input : input.url;
+    const url = new URL(rawUrl, window.location.href);
+    if (url.origin === window.location.origin && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+      const headers = new Headers(init.headers || {});
+      headers.set('X-CSRFToken', csrfToken);
+      init = {...init, headers};
+    }
+    return nativeFetch(input, init);
+  };
+}
+
 // Role selector on login page
 document.querySelectorAll('.role-btn').forEach(btn => {
   btn.addEventListener('click', () => {
