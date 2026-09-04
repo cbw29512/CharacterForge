@@ -55,12 +55,16 @@ export const authApi = {
 export const campaignApi = {
   list: () => api('/api/campaigns'),
   browse: () => api('/api/campaigns/browse'),
+  members: (campaignId) => api(`/api/campaigns/members?campaign_id=${encodeURIComponent(campaignId)}`),
   create: (payload) => api('/api/campaigns', { method: 'POST', body: payload }),
   join: (campaignId) => api('/api/campaigns/join', { method: 'POST', body: { campaign_id: campaignId } }),
+  approve: (campaignId, userId) => api('/api/campaigns/approve', { method: 'POST', body: { campaign_id: campaignId, user_id: userId } }),
+  kick: (campaignId, userId) => api('/api/campaigns/kick', { method: 'POST', body: { campaign_id: campaignId, user_id: userId } }),
   remove: (campaignId) => api('/api/campaigns/delete', { method: 'POST', body: { campaign_id: campaignId } }),
 };
 
 export const characterApi = {
+  list: () => api('/api/characters'),
   get: (id) => api(`/api/characters?id=${encodeURIComponent(id)}`),
   create: (payload) => api('/api/characters/create', { method: 'POST', body: payload }),
   remove: (id) => api('/api/characters/delete', { method: 'POST', body: { id } }),
