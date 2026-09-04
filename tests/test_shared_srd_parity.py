@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import unittest
 from pathlib import Path
 
-from services import srd_service
-
 ROOT = Path(__file__).resolve().parents[1]
 SHARED = json.loads((ROOT / "shared" / "srd-5.1.json").read_text(encoding="utf-8"))
+
+spec = importlib.util.spec_from_file_location("characterforge_srd_service", ROOT / "services" / "srd_service.py")
+if spec is None or spec.loader is None:
+    raise RuntimeError("Unable to load services/srd_service.py")
+srd_service = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(srd_service)
 
 
 def _normalize_class(value: dict) -> dict:
@@ -38,8 +43,14 @@ class SharedSrdParityTests(unittest.TestCase):
         self.assertEqual(SHARED["proficiency_by_level"], expected)
 
     def test_math_contract_matches_edge_cases(self) -> None:
-        self.assertEqual([srd_service.ability_modifier(score) for score in (1, 8, 9, 10, 11, 20, 30)], [-5, -1, -1, 0, 0, 5, 10])
-        self.assertEqual([srd_service.proficiency_bonus(level) for level in (1, 4, 5, 8, 9, 12, 13, 16, 17, 20)], [2, 2, 3, 3, 4, 4, 5, 5, 6, 6])
+        self.assertEqual(
+            [srd_service.ability_modifier(score) for score in (1, 8, 9, 10, 11, 20, 30)],
+            [-5, -1, -1, 0, 0, 5, 10],
+        )
+        self.assertEqual(
+            [srd_service.proficiency_bonus(level) for level in (1, 4, 5, 8, 9, 12, 13, 16, 17, 20)],
+            [2, 2, 3, 3, 4, 4, 5, 5, 6, 6],
+        )
 
 
 if __name__ == "__main__":
