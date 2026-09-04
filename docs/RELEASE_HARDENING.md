@@ -20,12 +20,16 @@ CharacterForge stays pre-production until every required gate below is green.
 - [x] Repair login/setup labeling and keyboard-accessible role selection
 - [x] Align first-launch password help text with the backend policy
 - [x] Repair wizard AI frontend/backend endpoint and payload contract
+- [x] Add global Flask-WTF CSRF protection for forms and same-origin JSON POSTs
 - [x] Remove tracked timestamped dependency/wizard backups and ignore `*.bak.*`
+- [x] Add rendered Pa11y WCAG CI for first-launch setup and login
+- [x] Raise the shared muted-text contrast token after the first rendered WCAG findings
+- [x] Improve admin form labels, table headers, modal semantics, and password-policy text
 
 ## Still required before public production
 
-- [ ] Add CSRF protection across state-changing form and JSON POST routes without breaking the wizard/AI flows
-- [ ] Run browser WCAG checks across setup, login, dashboards, builder, campaigns, and character sheets
+- [ ] Get the current rendered WCAG setup/login run fully green
+- [ ] Extend browser WCAG checks to authenticated dashboards, builder, campaigns, and character sheets
 - [ ] Add mobile/desktop browser smoke and performance checks
 - [ ] Add a browser-level print/PDF regression in addition to the source-level print contract
 - [ ] Validate production HTTPS cookie configuration (`SESSION_COOKIE_SECURE=true`)
