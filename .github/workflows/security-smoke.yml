@@ -12,13 +12,17 @@ permissions:
 jobs:
   security-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       SECRET_KEY: characterforge-ci-secret-0123456789-abcdefghijklmnopqrstuvwxyz
       DATABASE_URL: sqlite:////tmp/characterforge-ci.sqlite3
       FLASK_PORT: '5050'
       CI_ADMIN_USERNAME: ciadmin
-      CI_ADMIN_PASSWORD: CharacterForge-CI-Password-123!
+      CI_ADMIN_PASSWORD: CharacterForge-CI-Admin-Password-123!
+      CI_DM_USERNAME: cidm
+      CI_DM_PASSWORD: CharacterForge-CI-DM-Password-123!
+      CI_PLAYER_USERNAME: ciplayer
+      CI_PLAYER_PASSWORD: CharacterForge-CI-Player-Password-123!
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,32 +66,144 @@ jobs:
       - name: WCAG audit first-launch setup
         run: npx pa11y --config .pa11y.json http://127.0.0.1:5050/auth/setup
 
-      - name: Seed isolated admin for authenticated audits
+      - name: Seed isolated users, campaign, and character
         run: |
           python - <<'PY'
+          import json
           import os
           from app import create_app
           from db import db
-          from models import User
+          from models import User, Campaign, CampaignMembership, Character
           from services.auth_service import hash_password
 
           app = create_app()
           with app.app_context():
-              if User.query.filter_by(role="admin").count() == 0:
-                  db.session.add(User(
-                      username=os.environ["CI_ADMIN_USERNAME"],
-                      display_name="CI Admin",
-                      role="admin",
-                      password_hash=hash_password(os.environ["CI_ADMIN_PASSWORD"]),
-                  ))
-                  db.session.commit()
+              def ensure_user(username, password, role, display_name):
+                  user = User.query.filter_by(username=username).first()
+                  if not user:
+                      user = User(
+                          username=username,
+                          display_name=display_name,
+                          role=role,
+                          password_hash=hash_password(password),
+                      )
+                      db.session.add(user)
+                      db.session.flush()
+                  return user
+
+              admin = ensure_user(
+                  os.environ['CI_ADMIN_USERNAME'], os.environ['CI_ADMIN_PASSWORD'], 'admin', 'CI Admin')
+              dm = ensure_user(
+                  os.environ['CI_DM_USERNAME'], os.environ['CI_DM_PASSWORD'], 'dm', 'CI Dungeon Master')
+              player = ensure_user(
+                  os.environ['CI_PLAYER_USERNAME'], os.environ['CI_PLAYER_PASSWORD'], 'player', 'CI Player')
+
+              campaign = Campaign.query.filter_by(name='CI Accessibility Campaign').first()
+              if not campaign:
+                  campaign = Campaign(
+                      name='CI Accessibility Campaign',
+                      description='Deterministic release-gate fixture.',
+                      dm_id=dm.id,
+                  )
+                  db.session.add(campaign)
+                  db.session.flush()
+
+              for user, role in ((dm, 'dm'), (player, 'player')):
+                  membership = CampaignMembership.query.filter_by(
+                      campaign_id=campaign.id, user_id=user.id).first()
+                  if not membership:
+                      db.session.add(CampaignMembership(
+                          campaign_id=campaign.id,
+                          user_id=user.id,
+                          role=role,
+                          approved=True,
+                      ))
+
+              char = Character.query.filter_by(name='A11y Test Fighter').first()
+              if not char:
+                  char = Character(
+                      owner_id=player.id,
+                      campaign_id=campaign.id,
+                      is_npc=False,
+                      name='A11y Test Fighter',
+                      level=3,
+                      char_class='Fighter',
+                      race='Human',
+                      background='Soldier',
+                      alignment='Neutral Good',
+                      strength=16,
+                      dexterity=14,
+                      constitution=14,
+                      intelligence=10,
+                      wisdom=12,
+                      charisma=8,
+                      max_hp=28,
+                      current_hp=28,
+                      armor_class=16,
+                      speed=30,
+                      proficiency_bonus=2,
+                      hit_dice='3d10',
+                      build_complete=True,
+                      skills_json=json.dumps({'Athletics': True, 'Perception': True}),
+                      saving_throws_json=json.dumps({'Strength': True, 'Constitution': True}),
+                      equipment_json=json.dumps(['Longsword', 'Shield', 'Chain mail']),
+                      features_json=json.dumps(['Second Wind', 'Action Surge']),
+                      traits_json=json.dumps({'personality': 'Protects the party', 'ideal': 'Duty'}),
+                      notes='Deterministic browser and print regression fixture.',
+                  )
+                  db.session.add(char)
+                  db.session.flush()
+
+              db.session.commit()
+              with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+                  fh.write(f'CI_CAMPAIGN_ID={campaign.id}\n')
+                  fh.write(f'CI_CHARACTER_ID={char.id}\n')
           PY
 
       - name: WCAG audit login
         run: npx pa11y --config .pa11y.json http://127.0.0.1:5050/auth/login
 
       - name: WCAG audit authenticated admin dashboard
-        run: npx pa11y --config pa11y-admin.cjs http://127.0.0.1:5050/auth/login
+        env:
+          CI_AUDIT_USERNAME: ${{ env.CI_ADMIN_USERNAME }}
+          CI_AUDIT_PASSWORD: ${{ env.CI_ADMIN_PASSWORD }}
+          CI_AUDIT_PATH: /admin/
+        run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
+
+      - name: WCAG audit authenticated DM dashboard
+        env:
+          CI_AUDIT_USERNAME: ${{ env.CI_DM_USERNAME }}
+          CI_AUDIT_PASSWORD: ${{ env.CI_DM_PASSWORD }}
+          CI_AUDIT_PATH: /dm/
+        run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
+
+      - name: WCAG audit authenticated player dashboard
+        env:
+          CI_AUDIT_USERNAME: ${{ env.CI_PLAYER_USERNAME }}
+          CI_AUDIT_PASSWORD: ${{ env.CI_PLAYER_PASSWORD }}
+          CI_AUDIT_PATH: /player/
+        run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
+
+      - name: WCAG audit campaign view
+        env:
+          CI_AUDIT_USERNAME: ${{ env.CI_DM_USERNAME }}
+          CI_AUDIT_PASSWORD: ${{ env.CI_DM_PASSWORD }}
+          CI_AUDIT_PATH: /campaigns/${{ env.CI_CAMPAIGN_ID }}
+        run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
+
+      - name: WCAG audit character builder
+        env:
+          CI_AUDIT_USERNAME: ${{ env.CI_PLAYER_USERNAME }}
+          CI_AUDIT_PASSWORD: ${{ env.CI_PLAYER_PASSWORD }}
+          CI_AUDIT_PATH: /characters/new
+        run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
+
+      - name: WCAG audit character sheet
+        env:
+          CI_AUDIT_USERNAME: ${{ env.CI_PLAYER_USERNAME }}
+          CI_AUDIT_PASSWORD: ${{ env.CI_PLAYER_PASSWORD }}
+          CI_AUDIT_PATH: /characters/${{ env.CI_CHARACTER_ID }}/sheet
+        run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
 
       - name: Show server log on failure
         if: failure()
