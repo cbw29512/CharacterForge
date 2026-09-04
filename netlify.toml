@@ -33,3 +33,13 @@
   from = "/campaign"
   to = "/campaign.html"
   status = 200
+
+[[redirects]]
+  from = "/character"
+  to = "/character.html"
+  status = 200
+
+[[redirects]]
+  from = "/character-new"
+  to = "/character-new.html"
+  status = 200
