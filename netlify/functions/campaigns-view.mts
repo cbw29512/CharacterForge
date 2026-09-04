@@ -44,12 +44,13 @@ export default async function campaignView(request: Request): Promise<Response> 
     if (isDm) {
       const membershipResult = await getPool().query(
         `SELECT m.id, m.user_id, m.role AS membership_role, m.approved,
-                u.username, u.display_name, u.role AS user_role
+                u.username, u.display_name, u.role AS user_role,
+                ($2::bigint = u.id) AS is_owner
          FROM campaign_memberships m
          JOIN users u ON u.id = m.user_id
          WHERE m.campaign_id = $1
-         ORDER BY m.approved DESC, COALESCE(u.display_name, u.username), u.username`,
-        [campaignId],
+         ORDER BY is_owner DESC, m.approved DESC, COALESCE(u.display_name, u.username), u.username`,
+        [campaignId, campaign.dm_id],
       );
       members = membershipResult.rows.filter((row) => row.approved);
       pending = membershipResult.rows.filter((row) => !row.approved);
