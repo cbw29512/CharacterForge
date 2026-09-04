@@ -90,17 +90,17 @@ async function sendAiMessage() {
   }
 
   try {
-    const res = await fetch('/characters/ai_suggest', {
+    const res = await fetch('/characters/ai_step', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         step: document.getElementById('current-step')?.value || 'general',
-        character: charData,
+        build: charData,
         message: msg
       })
     });
     const data = await res.json();
-    appendMsg(data.reply || '(no response)', 'dm');
+    appendMsg(data.reply || data.error || '(no response)', 'dm');
   } catch (e) {
     appendMsg('[AI unavailable]', 'dm');
   }
