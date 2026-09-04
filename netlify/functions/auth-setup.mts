@@ -4,13 +4,11 @@ import { hashPassword, normalizeUsername, validatePassword } from '../lib/auth.m
 import { json, readJson } from '../lib/http.mts';
 import { getPool } from '../lib/pg.mts';
 
-const BOOTSTRAP_LOCK_ID = 264166431;
-
 export default async function authSetup(request: Request): Promise<Response> {
   if (request.method === 'GET') {
     try {
-      const { rows } = await getPool().query(`SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin') AS has_admin`);
-      return json({ setup_required: !rows[0]?.has_admin });
+      const { rows } = await getPool().query(`SELECT EXISTS (SELECT 1 FROM bootstrap_guards WHERE key = 'first_admin') AS claimed`);
+      return json({ setup_required: !rows[0]?.claimed });
     } catch (error) {
       console.error('CharacterForge setup status failed', error instanceof Error ? error.name : 'unknown_error');
       return json({ error: 'service_unavailable' }, 503);
@@ -49,34 +47,29 @@ export default async function authSetup(request: Request): Promise<Response> {
   }
 
   const passwordHash = await hashPassword(password);
-  const client = await getPool().connect();
   try {
-    await client.query('BEGIN');
-    await client.query('SELECT pg_advisory_xact_lock($1)', [BOOTSTRAP_LOCK_ID]);
-
-    const existing = await client.query(`SELECT 1 FROM users WHERE role = 'admin' LIMIT 1`);
-    if (existing.rowCount) {
-      await client.query('ROLLBACK');
-      return json({ error: 'setup_complete' }, 409);
-    }
-
-    const result = await client.query(
-      `INSERT INTO users (username, password_hash, role, display_name)
-       VALUES ($1, $2, 'admin', $3)
+    const result = await getPool().query(
+      `WITH claim AS (
+         INSERT INTO bootstrap_guards (key)
+         VALUES ('first_admin')
+         ON CONFLICT (key) DO NOTHING
+         RETURNING key
+       )
+       INSERT INTO users (username, password_hash, role, display_name)
+       SELECT $1, $2, 'admin', $3
+       FROM claim
        RETURNING id, username, role, display_name`,
       [username, passwordHash, displayName || username],
     );
-    await client.query('COMMIT');
+
+    if (!result.rowCount) return json({ error: 'setup_complete' }, 409);
     return json({ ok: true, user: result.rows[0] }, 201);
   } catch (error) {
-    try { await client.query('ROLLBACK'); } catch {}
     if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
       return json({ error: 'username_unavailable' }, 409);
     }
     console.error('CharacterForge admin bootstrap failed', error instanceof Error ? error.name : 'unknown_error');
     return json({ error: 'service_unavailable' }, 503);
-  } finally {
-    client.release();
   }
 }
 
