@@ -54,7 +54,10 @@ export const authApi = {
 
 export const campaignApi = {
   list: () => api('/api/campaigns'),
+  browse: () => api('/api/campaigns/browse'),
   create: (payload) => api('/api/campaigns', { method: 'POST', body: payload }),
+  join: (campaignId) => api('/api/campaigns/join', { method: 'POST', body: { campaign_id: campaignId } }),
+  remove: (campaignId) => api('/api/campaigns/delete', { method: 'POST', body: { campaign_id: campaignId } }),
 };
 
 export const characterApi = {
@@ -66,6 +69,6 @@ export const characterApi = {
 export const templateApi = {
   list: (npc = false) => api(`/api/templates?npc=${npc ? 'true' : 'false'}`),
   save: (characterId, payload) => api('/api/templates/save', { method: 'POST', body: { character_id: characterId, ...payload } }),
-  use: (id) => api('/api/templates/use', { method: 'POST', body: { id } }),
-  remove: (id) => api('/api/templates/delete', { method: 'POST', body: { id } }),
+  use: (templateId) => api('/api/templates/use', { method: 'POST', body: { template_id: templateId } }),
+  remove: (templateId) => api('/api/templates/delete', { method: 'POST', body: { template_id: templateId } }),
 };
