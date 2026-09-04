@@ -87,8 +87,36 @@
     });
   }
 
+  function hardenCharacterSheetModal() {
+    if (!/\/characters\/\d+\/sheet$/.test(window.location.pathname)) return;
+
+    const modal = document.getElementById("modal-save-template");
+    if (!modal) return;
+
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+
+    const heading = modal.querySelector("h2");
+    if (heading) {
+      heading.id = heading.id || "save-template-title";
+      modal.setAttribute("aria-labelledby", heading.id);
+    }
+
+    const close = modal.querySelector(".modal-close");
+    if (close) {
+      close.type = "button";
+      close.setAttribute("aria-label", "Close save template dialog");
+    }
+
+    const form = modal.querySelector("form");
+    if (!form) return;
+    setAccessibleName(form.querySelector('[name="template_name"]'), "Template name");
+    setAccessibleName(form.querySelector('[name="template_description"]'), "Template description");
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     hardenQuickNpcModal();
     hardenCharacterBuilder();
+    hardenCharacterSheetModal();
   });
 })();
