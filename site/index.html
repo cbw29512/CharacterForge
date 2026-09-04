@@ -15,6 +15,7 @@
     <div class="nav-brand">⚔ CharacterForge</div>
     <div class="nav-links">
       <button class="nav-button" type="button" data-view="campaigns">🎲 Campaigns</button>
+      <button class="nav-button" type="button" data-view="browse">Browse</button>
       <button class="nav-button" type="button" data-view="characters">⚔ Characters</button>
       <button class="nav-button" type="button" data-view="templates">📋 Templates</button>
     </div>
@@ -80,7 +81,7 @@
       <div class="frontend-heading">
         <div>
           <h1 id="campaigns-title">Campaigns</h1>
-          <p id="campaigns-subtitle">Your accessible campaigns.</p>
+          <p>Your accessible campaigns.</p>
         </div>
         <button id="refresh-campaigns" class="btn" type="button">Refresh</button>
       </div>
@@ -95,14 +96,76 @@
       <div id="campaign-list" class="frontend-grid"></div>
     </section>
 
+    <section id="browse-view" class="app-view" hidden aria-labelledby="browse-title">
+      <div class="frontend-heading">
+        <div>
+          <h1 id="browse-title">Browse Campaigns</h1>
+          <p>Request access to an active campaign.</p>
+        </div>
+        <button id="refresh-browse" class="btn" type="button">Refresh</button>
+      </div>
+      <div id="browse-list" class="frontend-grid"></div>
+    </section>
+
     <section id="characters-view" class="app-view" hidden aria-labelledby="characters-title">
       <div class="frontend-heading">
         <div>
-          <h1 id="characters-title">Characters</h1>
-          <p>Character creation and sheets are the next frontend cutover target.</p>
+          <h1 id="characters-title">Forge a Character</h1>
+          <p>Build from the same certified SRD catalog used by the backend.</p>
         </div>
       </div>
-      <div class="frontend-card"><p>The Netlify character APIs are live in the migration contract; this shell will wire them here next.</p></div>
+      <form id="character-create-form" class="frontend-card">
+        <div class="frontend-form-grid">
+          <div>
+            <label for="char-name">Name</label>
+            <input id="char-name" name="name" maxlength="200" placeholder="(unnamed)">
+          </div>
+          <div>
+            <label for="char-level">Level</label>
+            <input id="char-level" name="level" type="number" min="1" max="30" value="1">
+          </div>
+          <div>
+            <label for="char-race">Race</label>
+            <select id="char-race" name="race" required></select>
+          </div>
+          <div>
+            <label for="char-class">Class</label>
+            <select id="char-class" name="char_class" required></select>
+          </div>
+          <div>
+            <label for="char-background">Background</label>
+            <select id="char-background" name="background" required></select>
+          </div>
+          <div>
+            <label for="char-alignment">Alignment</label>
+            <select id="char-alignment" name="alignment" required></select>
+          </div>
+          <div>
+            <label for="char-campaign">Campaign</label>
+            <select id="char-campaign" name="campaign_id"><option value="">Unassigned</option></select>
+          </div>
+          <div id="npc-field" hidden>
+            <label><input id="char-npc" name="is_npc" type="checkbox"> Create as NPC</label>
+          </div>
+        </div>
+
+        <fieldset class="frontend-ability-fieldset">
+          <legend>Ability Scores</legend>
+          <div class="frontend-form-grid ability-grid">
+            <label>Strength <input name="strength" type="number" min="1" max="30" value="10"></label>
+            <label>Dexterity <input name="dexterity" type="number" min="1" max="30" value="10"></label>
+            <label>Constitution <input name="constitution" type="number" min="1" max="30" value="10"></label>
+            <label>Intelligence <input name="intelligence" type="number" min="1" max="30" value="10"></label>
+            <label>Wisdom <input name="wisdom" type="number" min="1" max="30" value="10"></label>
+            <label>Charisma <input name="charisma" type="number" min="1" max="30" value="10"></label>
+          </div>
+        </fieldset>
+
+        <label for="char-notes">Notes</label>
+        <textarea id="char-notes" name="notes" rows="3"></textarea>
+        <button class="btn btn-primary" type="submit">Forge Character</button>
+      </form>
+      <article id="created-character" class="frontend-card" hidden aria-live="polite"></article>
     </section>
 
     <section id="templates-view" class="app-view" hidden aria-labelledby="templates-title">
