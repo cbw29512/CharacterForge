@@ -71,7 +71,7 @@ See:
 - `docs/NETLIFY_MIGRATION.md` — migration Definition of Done and cutover state
 - `docs/NETLIFY_OPERATIONS.md` — preview isolation, environment, backup, restore, and cutover runbook
 - `docs/NETLIFY_PRODUCTION_READINESS.md` — production readiness criteria
-- `docs/NETLIFY_FIRST_DEPLOY.md` — deliberate first-deploy checklist
+- `docs/NETLIFY_DEPLOY_CHECKLIST.md` — deliberate first-deploy checklist
 - `docs/NETLIFY_PRODUCTION_SMOKE.md` — exact-SHA production verification
 
 ## Local Flask development
