@@ -20,6 +20,39 @@ Target production primitives:
 
 Local-only Ollama integration remains optional until a production-safe remote AI provider is explicitly selected.
 
+## Verified implementation progress
+
+The migration is substantially implemented and locally/CI certified, but has not yet been production-deployed.
+
+Completed and tested:
+
+- versioned Postgres schema and repeatable migrations
+- durable opaque server-side sessions
+- first-admin bootstrap, login, session lookup, and POST logout
+- secure session/CSRF cookie contract
+- campaign list/create/browse/join/approve/kick/delete authorization
+- campaign detail and membership manager views
+- campaign-owner membership immutability
+- protected character read/create/delete operations
+- shared SRD catalog and Flask/Netlify parity contracts
+- template list/save/use/delete ownership lifecycle
+- modular static Netlify frontend for auth, campaigns, characters, and templates
+- static frontend security headers and CSP
+- eight-page static WCAG gate
+- exact build provenance through `/build-info.json`
+- manual-only production smoke checker for exact deployed SHA, security headers, and database/schema health
+
+Still intentionally incomplete before production cutover:
+
+- admin/user-management parity beyond first-admin bootstrap
+- Netlify frontend print-parity certification against the Flask printable-sheet reference
+- explicit 390px Netlify frontend mobile-overflow regression
+- production secrets/resource configuration
+- backup and restore procedure
+- deploy-preview versus production database isolation
+- first deliberate Netlify deployment
+- first real production smoke run
+
 ## State / data model to preserve
 
 Migration must preserve these domain entities and relationships before feature work expands:
@@ -68,44 +101,51 @@ The migration is not acceptable unless all of these remain true:
 ### API and persistence
 
 - [ ] Netlify-native API routes cover the required auth, user, campaign, membership, character, and template operations
-- [ ] Netlify Database schema represents the existing domain model and constraints
-- [ ] migrations are versioned and repeatable
-- [ ] session/auth state is durable and does not depend on an ephemeral filesystem
-- [ ] authorization tests are ported before feature parity is declared
+- [x] Netlify Database schema represents the existing core domain model and constraints
+- [x] migrations are versioned and repeatable
+- [x] session/auth state is durable and does not depend on an ephemeral filesystem
+- [x] authorization tests are ported for the migrated campaign, character, and template surfaces
 
 ### UI
 
-- [ ] existing role workflows remain usable
-- [ ] builder behavior remains equivalent for supported features
-- [ ] character sheet remains printable on Letter paper
-- [ ] mobile layouts do not horizontally overflow at 390px
-- [ ] rendered WCAG checks cover public and authenticated critical paths
+- [ ] existing role workflows remain usable, including remaining admin/user-management parity
+- [x] builder behavior uses the shared certified SRD catalog for the currently migrated creation flow
+- [ ] character sheet print parity remains certified on Letter paper in the Netlify frontend
+- [ ] Netlify frontend mobile layouts have an explicit 390px horizontal-overflow regression
+- [x] rendered WCAG checks cover all eight current static Netlify pages
 
 ### Operations
 
 - [ ] production secrets come only from Netlify environment configuration
 - [ ] database backups and restore procedure are documented and tested
 - [ ] deploy previews never mutate production data
-- [ ] production smoke proves the deployed commit/version
-- [ ] security headers and HTTPS cookie properties are asserted against production
+- [ ] production smoke proves the deployed commit/version on a real deployment
+- [ ] security headers and HTTPS cookie properties are asserted against a real production deployment
 - [ ] usage/credit impact is understood before enabling production database resources
+
+Implemented but awaiting first real deployment:
+
+- [x] exact deployed-commit build provenance is generated at build time
+- [x] production smoke tooling is manual-only and verification-only
+- [x] smoke tooling validates expected SHA, security headers, and database/schema health
+- [x] production deployment readiness and deliberate-deploy checklists are documented
 
 ### Cutover
 
-- [ ] migration parity suite green
+- [ ] migration parity suite green for all required production workflows
 - [ ] production deployment green
 - [ ] one controlled production smoke run green
-- [ ] old Flask deployment is not publicly exposed as a second competing backend
+- [x] old Flask deployment is not being exposed as a second competing public backend during migration
 
 ## Sequencing
 
-1. Freeze the hardened Flask behavior as the reference contract.
-2. Define Netlify Database schema and migrations.
-3. Port authentication/session boundaries.
-4. Port authorization-protected API operations.
-5. Connect the frontend to the new API.
-6. Port print/export behavior and authenticated accessibility gates.
-7. Add preview/prod isolation, backup/recovery, and production smoke.
-8. Cut over only after parity is green.
+1. Freeze the hardened Flask behavior as the reference contract. **Done.**
+2. Define Netlify Database schema and migrations. **Done for the core domain.**
+3. Port authentication/session boundaries. **Done for bootstrap/login/session/logout.**
+4. Port authorization-protected API operations. **Done for campaign, character, SRD, and template surfaces; admin/user management remains.**
+5. Connect the frontend to the new API. **Substantially done for current migrated workflows.**
+6. Port print/export behavior and authenticated accessibility gates. **Static WCAG done; Netlify print/mobile parity remains.**
+7. Add preview/prod isolation, backup/recovery, and production smoke. **Smoke tooling done; isolation and backup/recovery remain.**
+8. Cut over only after parity is green. **Not started.**
 
 Do not burn production deploy credits to discover problems that local/CI parity tests can detect first.
