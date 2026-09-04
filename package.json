@@ -7,6 +7,8 @@
     "node": "24.x"
   },
   "scripts": {
+    "build:netlify": "node scripts/build_netlify_frontend.mjs",
+    "test:netlify-frontend": "node --test scripts/netlify_frontend_contract.test.mjs",
     "test:netlify-db": "node --test scripts/netlify_db_contract.test.mjs",
     "test:netlify-health": "node --test scripts/netlify_health_contract.test.mjs",
     "test:netlify-auth": "node --test scripts/netlify_auth_contract.test.mjs"
