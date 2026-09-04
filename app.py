@@ -3,10 +3,12 @@ import logging
 import os
 from flask import Flask, redirect, url_for, session
 from flask_session import Session
+from flask_wtf.csrf import CSRFProtect
 from config import Config
 from db import db
 
 logger = logging.getLogger(__name__)
+csrf = CSRFProtect()
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -27,6 +29,7 @@ def create_app() -> Flask:
 
     Session(app)
     db.init_app(app)
+    csrf.init_app(app)
 
     from routes.auth import auth_bp
     from routes.admin import admin_bp
