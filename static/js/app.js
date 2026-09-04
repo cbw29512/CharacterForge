@@ -137,6 +137,54 @@ async function sendAiMessage() {
 if (aiSend) aiSend.addEventListener('click', sendAiMessage);
 if (aiInput) aiInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendAiMessage(); });
 
+// Campaign Quick NPC AI generation. Kept in shared JS so it runs in the
+// campaign page's normal script context instead of legacy title-block markup.
+window.generateNPC = async function generateNPC() {
+  const desc = document.getElementById('npc-ai-desc')?.value?.trim();
+  const status = document.getElementById('npc-ai-status');
+  const form = document.getElementById('npc-form');
+  if (!desc || !status || !form) return;
+
+  status.textContent = 'Generating stat block...';
+  try {
+    const res = await fetch('/characters/ai_npc', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({description: desc})
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      status.textContent = data.error || 'NPC generation failed.';
+      return;
+    }
+
+    const npc = data.npc || {};
+    const set = (name, value) => {
+      const el = form.querySelector(`[name="${name}"]`);
+      if (el && value !== undefined && value !== null) el.value = value;
+    };
+    set('name', npc.name);
+    set('level', npc.level);
+    set('char_class', npc.char_class);
+    set('race', npc.race);
+    set('alignment', npc.alignment);
+    set('strength', npc.strength);
+    set('dexterity', npc.dexterity);
+    set('constitution', npc.constitution);
+    set('intelligence', npc.intelligence);
+    set('wisdom', npc.wisdom);
+    set('charisma', npc.charisma);
+    set('armor_class_override', npc.armor_class);
+    set('hp_override', npc.max_hp);
+    set('speed', npc.speed);
+    set('notes', String(npc.notes || '') + (npc.reasoning ? `\n\n[AI reasoning: ${npc.reasoning}]` : ''));
+    status.textContent = 'Stat block generated. Review it before saving.';
+  } catch (error) {
+    console.error('Quick NPC generation failed', error);
+    status.textContent = 'NPC generation is unavailable right now.';
+  }
+};
+
 // HP bar update
 document.querySelectorAll('.hp-bar-fill').forEach(bar => {
   const cur = parseInt(bar.dataset.cur) || 0;
