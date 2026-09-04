@@ -32,6 +32,12 @@ class UiContractTests(unittest.TestCase):
         self.assertIn('@characters_bp.post("/ai_step")', CHARACTERS)
         self.assertNotIn("/characters/ai_suggest", APP_JS)
 
+    def test_quick_npc_frontend_matches_flask_route(self) -> None:
+        self.assertIn("window.generateNPC", APP_JS)
+        self.assertIn("fetch('/characters/ai_npc'", APP_JS)
+        self.assertIn('@characters_bp.post("/ai_npc")', CHARACTERS)
+        self.assertIn("headers: {'Content-Type': 'application/json'}", APP_JS)
+
 
 if __name__ == "__main__":
     unittest.main()
