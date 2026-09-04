@@ -28,3 +28,8 @@
   from = "/app"
   to = "/app.html"
   status = 200
+
+[[redirects]]
+  from = "/campaign"
+  to = "/campaign.html"
+  status = 200
