@@ -14,10 +14,10 @@
   "dependencies": {
     "@netlify/database": "2.0.0",
     "@netlify/functions": "6.0.0",
-    "bcrypt": "6.0.0"
+    "bcrypt": "6.0.0",
+    "pg": "8.23.0"
   },
   "devDependencies": {
-    "@netlify/database-dev": "1.0.1",
-    "pg": "8.23.0"
+    "@netlify/database-dev": "1.0.1"
   }
 }
