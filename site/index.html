@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CharacterForge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/a11y.css">
+  <link rel="stylesheet" href="/frontend.css">
+</head>
+<body>
+  <nav class="topnav" id="app-nav" hidden>
+    <div class="nav-brand">⚔ CharacterForge</div>
+    <div class="nav-links">
+      <button class="nav-button" type="button" data-view="campaigns">🎲 Campaigns</button>
+      <button class="nav-button" type="button" data-view="characters">⚔ Characters</button>
+      <button class="nav-button" type="button" data-view="templates">📋 Templates</button>
+    </div>
+    <div class="nav-user">
+      <span class="badge" id="role-badge"></span>
+      <span class="nav-name" id="user-name"></span>
+      <button type="button" class="btn-logout" id="logout-button">Logout</button>
+    </div>
+  </nav>
+
+  <main class="page-wrap" id="app-main">
+    <div id="status-region" class="flash-wrap" aria-live="polite"></div>
+
+    <section id="boot-view" class="frontend-center" aria-labelledby="boot-title">
+      <div class="login-box">
+        <div class="login-title" id="boot-title">⚔ CharacterForge</div>
+        <div class="login-sub">Preparing the forge…</div>
+      </div>
+    </section>
+
+    <section id="setup-view" class="frontend-center" hidden aria-labelledby="setup-title">
+      <div class="login-box">
+        <div class="login-title" id="setup-title">⚔ First Forge Setup</div>
+        <div class="login-sub">Create the first administrator account.</div>
+        <form id="setup-form">
+          <label for="setup-username">Username</label>
+          <input id="setup-username" name="username" autocomplete="username" required maxlength="80">
+          <label for="setup-display-name">Display name</label>
+          <input id="setup-display-name" name="display_name" maxlength="120">
+          <label for="setup-password">Password</label>
+          <input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="12" required>
+          <label for="setup-confirm">Confirm password</label>
+          <input id="setup-confirm" name="confirm" type="password" autocomplete="new-password" minlength="12" required>
+          <button class="btn btn-primary full-width" type="submit">Create Administrator</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="login-view" class="frontend-center" hidden aria-labelledby="login-title">
+      <div class="login-box">
+        <div class="login-title" id="login-title">⚔ CharacterForge</div>
+        <div class="login-sub">Forge your legend. Enter the realm.</div>
+        <form id="login-form">
+          <input type="hidden" name="role" id="role-input" value="player">
+          <fieldset class="role-fieldset">
+            <legend>I am a…</legend>
+            <div class="role-selector" role="group" aria-label="Account role">
+              <button type="button" class="role-btn active" data-role="player" aria-pressed="true">⚔ Player</button>
+              <button type="button" class="role-btn" data-role="dm" aria-pressed="false">🎲 Dungeon Master</button>
+              <button type="button" class="role-btn" data-role="admin" aria-pressed="false">🛡 Admin</button>
+            </div>
+          </fieldset>
+          <label for="login-username">Username</label>
+          <input id="login-username" name="username" autocomplete="username" required>
+          <label for="login-password">Password</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+          <button class="btn btn-primary full-width" type="submit">Enter the Realm</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="campaigns-view" class="app-view" hidden aria-labelledby="campaigns-title">
+      <div class="frontend-heading">
+        <div>
+          <h1 id="campaigns-title">Campaigns</h1>
+          <p id="campaigns-subtitle">Your accessible campaigns.</p>
+        </div>
+        <button id="refresh-campaigns" class="btn" type="button">Refresh</button>
+      </div>
+      <form id="campaign-create-form" class="frontend-card" hidden>
+        <h2>Create Campaign</h2>
+        <label for="campaign-name">Campaign name</label>
+        <input id="campaign-name" name="name" required maxlength="200">
+        <label for="campaign-description">Description</label>
+        <textarea id="campaign-description" name="description" rows="3"></textarea>
+        <button class="btn btn-primary" type="submit">Create Campaign</button>
+      </form>
+      <div id="campaign-list" class="frontend-grid"></div>
+    </section>
+
+    <section id="characters-view" class="app-view" hidden aria-labelledby="characters-title">
+      <div class="frontend-heading">
+        <div>
+          <h1 id="characters-title">Characters</h1>
+          <p>Character creation and sheets are the next frontend cutover target.</p>
+        </div>
+      </div>
+      <div class="frontend-card"><p>The Netlify character APIs are live in the migration contract; this shell will wire them here next.</p></div>
+    </section>
+
+    <section id="templates-view" class="app-view" hidden aria-labelledby="templates-title">
+      <div class="frontend-heading">
+        <div>
+          <h1 id="templates-title">Templates</h1>
+          <p>Your reusable character and NPC builds.</p>
+        </div>
+        <button id="refresh-templates" class="btn" type="button">Refresh</button>
+      </div>
+      <div id="template-list" class="frontend-grid"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/frontend-app.js"></script>
+</body>
+</html>
