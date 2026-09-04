@@ -17,8 +17,9 @@ export default async function deleteAdminUser(request: Request): Promise<Respons
   try { body = await readJson(request); }
   catch { return json({ error: 'invalid_json' }, 400); }
   const userId = Number(body?.user_id);
+  const currentUserId = Number(auth.session.id);
   if (!Number.isSafeInteger(userId) || userId <= 0) return json({ error: 'invalid_input' }, 400);
-  if (userId === auth.session.id) return json({ error: 'cannot_delete_self' }, 409);
+  if (userId === currentUserId) return json({ error: 'cannot_delete_self' }, 409);
 
   const client = await getPool().connect();
   try {
