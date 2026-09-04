@@ -3,43 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>CharacterForge — Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/a11y.css">
 </head>
 <body>
 <div class="login-wrap">
-  <div class="login-box">
-    <div class="login-title">⚔ CharacterForge</div>
+  <main class="login-box" aria-labelledby="login-title">
+    <div class="login-title" id="login-title">⚔ CharacterForge</div>
     <div class="login-sub">Forge your legend. Enter the realm.</div>
 
     {% with msgs = get_flashed_messages(with_categories=true) %}
       {% if msgs %}
         {% for cat, msg in msgs %}
-          <div class="flash flash-{{ cat }}" style="margin-bottom:12px">{{ msg }}</div>
+          <div class="flash flash-{{ cat }}" role="status" style="margin-bottom:12px">{{ msg }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
     <form method="post" action="/auth/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="role" id="role-input" value="player">
 
-      <label>I am a...</label>
-      <div class="role-selector">
-        <div class="role-btn" data-role="player">⚔ Player</div>
-        <div class="role-btn" data-role="dm">🎲 Dungeon Master</div>
-        <div class="role-btn" data-role="admin">🛡 Admin</div>
-      </div>
+      <fieldset style="border:0;padding:0;margin:0 0 14px">
+        <legend>I am a...</legend>
+        <div class="role-selector" role="group" aria-label="Account role">
+          <button type="button" class="role-btn" data-role="player" aria-pressed="false">⚔ Player</button>
+          <button type="button" class="role-btn" data-role="dm" aria-pressed="false">🎲 Dungeon Master</button>
+          <button type="button" class="role-btn" data-role="admin" aria-pressed="false">🛡 Admin</button>
+        </div>
+      </fieldset>
 
-      <label>Username</label>
-      <input type="text" name="username" autocomplete="username" autofocus required>
+      <label for="login-username">Username</label>
+      <input id="login-username" type="text" name="username" autocomplete="username" autofocus required>
 
-      <label>Password</label>
-      <input type="password" name="password" autocomplete="current-password" required>
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" name="password" autocomplete="current-password" required>
 
       <button type="submit" class="btn btn-primary" style="width:100%">Enter the Realm</button>
     </form>
-  </div>
+  </main>
 </div>
 <script src="/static/js/app.js"></script>
 </body>

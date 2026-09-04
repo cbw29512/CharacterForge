@@ -8,34 +8,90 @@ from services.ollama_service import step_prompt, ollama_chat, generate_npc, olla
 
 characters_bp = Blueprint("characters", __name__, url_prefix="/characters")
 
+
 def _require_login():
     if not session.get("user_id"):
         flash("Please log in.", "error")
         return False
     return True
 
-def _can_edit_character(char):
-    uid = session.get("user_id")
-    role = session.get("role")
-    if role == "admin": return True
-    if role == "dm":
-        if char.campaign_id:
-            c = Campaign.query.get(char.campaign_id)
-            if c and c.dm_id == uid: return True
-        return char.is_npc
-    return char.owner_id == uid
 
-def _can_delete_character(char):
+def _campaign_access(campaign_id: int | None) -> Campaign | None:
+    """Return a campaign only when the current user may access it."""
+    if not campaign_id:
+        return None
+    campaign = Campaign.query.get(campaign_id)
+    if not campaign:
+        return None
     uid = session.get("user_id")
     role = session.get("role")
-    if role == "admin": return True
-    if role == "dm":
-        if char.is_npc: return True
-        if char.campaign_id:
-            c = Campaign.query.get(char.campaign_id)
-            if c and c.dm_id == uid: return True
+    if role == "admin" or campaign.dm_id == uid:
+        return campaign
+    membership = CampaignMembership.query.filter_by(
+        campaign_id=campaign.id,
+        user_id=uid,
+        approved=True,
+    ).first()
+    return campaign if membership else None
+
+
+def _can_create_in_campaign(campaign_id: int | None, is_npc: bool) -> bool:
+    if not campaign_id:
+        return True
+    campaign = Campaign.query.get(campaign_id)
+    if not campaign:
         return False
+    uid = session.get("user_id")
+    role = session.get("role")
+    if role == "admin":
+        return True
+    if is_npc:
+        return role == "dm" and campaign.dm_id == uid
+    if campaign.dm_id == uid:
+        return True
+    return CampaignMembership.query.filter_by(
+        campaign_id=campaign.id,
+        user_id=uid,
+        approved=True,
+    ).first() is not None
+
+
+def _can_view_character(char: Character) -> bool:
+    uid = session.get("user_id")
+    role = session.get("role")
+    if role == "admin" or char.owner_id == uid:
+        return True
+    if char.campaign_id:
+        return _campaign_access(char.campaign_id) is not None
+    return False
+
+
+def _can_edit_character(char: Character) -> bool:
+    uid = session.get("user_id")
+    role = session.get("role")
+    if role == "admin":
+        return True
+    if char.owner_id == uid:
+        return True
+    if role == "dm" and char.campaign_id:
+        campaign = Campaign.query.get(char.campaign_id)
+        return bool(campaign and campaign.dm_id == uid)
+    return False
+
+
+def _can_delete_character(char: Character) -> bool:
+    uid = session.get("user_id")
+    role = session.get("role")
+    if role == "admin":
+        return True
+    if role == "dm":
+        if char.campaign_id:
+            campaign = Campaign.query.get(char.campaign_id)
+            if campaign and campaign.dm_id == uid:
+                return True
+        return bool(char.is_npc and char.owner_id == uid)
     return char.owner_id == uid and not char.is_npc
+
 
 @characters_bp.get("/new")
 def new():
@@ -47,9 +103,11 @@ def new():
     if is_npc and role not in ("dm", "admin"):
         flash("Only DMs and Admins can create NPCs.", "error")
         return redirect(url_for("auth.login_get"))
+    if campaign_id and not _can_create_in_campaign(campaign_id, is_npc):
+        flash("You don't have permission to create a character in that campaign.", "error")
+        return redirect(url_for("player.dashboard" if role == "player" else "dm.dashboard"))
     ollama_url = current_app.config["OLLAMA_URL"]
 
-    # Load template if requested
     preload = None
     template_id = request.args.get("template", type=int)
     if template_id:
@@ -57,7 +115,6 @@ def new():
         tmpl = CharacterTemplate.query.get(template_id)
         if tmpl and (tmpl.owner_id == session.get("user_id") or role == "admin"):
             tmpl.times_used += 1
-            from db import db
             db.session.commit()
             preload = tmpl.to_dict()
 
@@ -73,6 +130,7 @@ def new():
         preload=preload,
     )
 
+
 @characters_bp.post("/create")
 def create():
     if not _require_login():
@@ -86,8 +144,12 @@ def create():
     if is_npc and role not in ("dm", "admin"):
         flash("Only DMs and Admins can create NPCs.", "error")
         return redirect(url_for("auth.login_get"))
+    if campaign_id and not _can_create_in_campaign(campaign_id, is_npc):
+        flash("You don't have permission to create a character in that campaign.", "error")
+        return redirect(url_for("player.dashboard" if role == "player" else "dm.dashboard"))
 
-    def score(key): return max(1, min(30, int(f.get(key, 10) or 10)))
+    def score(key):
+        return max(1, min(30, int(f.get(key, 10) or 10)))
 
     race_name = f.get("race", "Human")
     class_name = f.get("char_class", "Fighter")
@@ -113,7 +175,6 @@ def create():
     armor_class = int(ac_override) if ac_override and ac_override.lstrip('-').isdigit() else auto_ac
     speed = max(0, int(f.get("speed", 30) or 30))
 
-    # Personality fields
     personality_trait = f.get("personality_trait", "")
     ideal = f.get("ideal", "")
     bond = f.get("bond", "")
@@ -122,11 +183,11 @@ def create():
         "personality": personality_trait,
         "ideal": ideal,
         "bond": bond,
-        "flaw": flaw
+        "flaw": flaw,
     })
 
     char = Character(
-        owner_id=uid if not is_npc else None,
+        owner_id=uid,
         campaign_id=campaign_id,
         is_npc=is_npc,
         name=(f.get("name") or "(unnamed)").strip(),
@@ -153,7 +214,6 @@ def create():
     )
 
     bg = srd_service.get_background(bg_name) or {}
-    # Merge background skills + any class skills
     skills_dict = {s: True for s in bg.get("skill_proficiencies", [])}
     char.skills_json = json.dumps(skills_dict)
     char.equipment_json = json.dumps(bg.get("equipment", []))
@@ -163,7 +223,6 @@ def create():
         feats.extend(srd_class.get("features_by_level", {}).get(lvl, []))
     char.features_json = json.dumps(feats)
 
-    # Saving throw proficiencies from class
     saves = srd_class.get("saving_throws", [])
     char.saving_throws_json = json.dumps({s: True for s in saves})
 
@@ -177,15 +236,20 @@ def create():
         return redirect(url_for("dm.dashboard"))
     return redirect(url_for("player.dashboard"))
 
+
 @characters_bp.get("/<int:cid>/sheet")
 def sheet(cid: int):
     if not _require_login():
         return redirect(url_for("auth.login_get"))
     char = Character.query.get_or_404(cid)
+    if not _can_view_character(char):
+        flash("You don't have permission to view this character.", "error")
+        return redirect(url_for("auth.login_get"))
     return render_template("characters/sheet.html",
         char=char, data=char.to_sheet_dict(),
         can_edit=_can_edit_character(char),
         can_delete=_can_delete_character(char))
+
 
 @characters_bp.post("/<int:cid>/delete")
 def delete(cid: int):
@@ -204,7 +268,6 @@ def delete(cid: int):
         return redirect(url_for("campaigns.view", cid=campaign_id))
     return redirect(url_for("dm.dashboard") if is_npc else url_for("player.dashboard"))
 
-# ─── AI ENDPOINTS ────────────────────────────────────────────────────────────
 
 @characters_bp.post("/ai_step")
 def ai_step():
@@ -221,6 +284,7 @@ def ai_step():
     messages = step_prompt(step, build, user_message)
     reply = ollama_chat(url, model, messages)
     return jsonify({"reply": reply})
+
 
 @characters_bp.post("/ai_npc")
 def ai_npc():

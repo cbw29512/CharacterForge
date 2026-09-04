@@ -44,5 +44,6 @@ secrets/
 # Runtime sessions
 data/sessions/
 
+# Local/generated backup artifacts
 _backups/
-routes/*.bak.*
+*.bak.*

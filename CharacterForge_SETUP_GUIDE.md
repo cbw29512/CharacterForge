@@ -32,9 +32,7 @@
 2. Click "Download the installer" (EDB installer)
 3. Select version 16.x for Windows x86-64
 4. Run the installer
-5. When asked for a password for the postgres superuser, use:
-   CharForge2026!
-   WRITE THIS DOWN — you will need it
+5. When prompted for the postgres superuser password, generate a unique local-development password. Do not reuse it anywhere else and do not commit it to Git.
 6. Leave the port as 5432 (default)
 7. Finish the install
 8. Verify: Open PowerShell and type:
@@ -49,13 +47,15 @@
 1. Open PowerShell as Administrator
 2. Connect to PostgreSQL:
    psql -U postgres
-3. Enter your password: CharForge2026!
-4. Run these commands one at a time:
+3. Enter the unique password you created during installation.
+4. Create a dedicated CharacterForge database user with a unique password of your own choosing:
 
-   CREATE USER charforgeuser WITH PASSWORD 'CharForge2026!';
+   CREATE USER charforgeuser WITH PASSWORD '<YOUR-UNIQUE-LOCAL-PASSWORD>';
    CREATE DATABASE characterforge OWNER charforgeuser;
    GRANT ALL PRIVILEGES ON DATABASE characterforge TO charforgeuser;
    \q
+
+Never copy a password from public documentation into a real deployment.
 
 ---
 
@@ -85,74 +85,51 @@ Open PowerShell and run these commands:
 
 ---
 
-## STEP 7: Create requirements.txt
+## STEP 7: Install Python Packages
 
-In the CharacterForge folder, create a file called requirements.txt with this content:
+The repository already includes `requirements.txt`.
 
-   flask==3.1.0
-   flask-sqlalchemy==3.1.1
-   flask-session==0.8.0
-   psycopg2-binary==2.9.9
-   bcrypt==4.1.2
-   itsdangerous==2.2.0
-   python-dotenv==1.0.1
-   requests==2.31.0
-   reportlab==4.1.0
-   flask-mail==0.10.0
+Create and activate a virtual environment, then install dependencies:
 
----
-
-## STEP 8: Install Python Packages
-
-In PowerShell, from the CharacterForge folder:
-
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   python -m pip install --upgrade pip
    pip install -r requirements.txt
 
-Wait for all packages to install. You should see "Successfully installed" at the end.
-
 ---
 
-## STEP 9: Create .env File
+## STEP 8: Create .env File
 
-In the CharacterForge folder, create a file called .env with this content:
+In the CharacterForge folder, create a file called `.env` with your own values:
 
-   SECRET_KEY=change-this-to-a-long-random-string
-   DATABASE_URL=postgresql://charforgeuser:CharForge2026!@localhost/characterforge
+   SECRET_KEY=<GENERATE-A-LONG-RANDOM-SECRET>
+   DATABASE_URL=postgresql://charforgeuser:<YOUR-UNIQUE-LOCAL-PASSWORD>@localhost/characterforge
    OLLAMA_URL=http://localhost:4242
    ADMIN_EMAIL=admin@characterforge.local
    FLASK_ENV=development
    FLASK_PORT=5050
 
+Do not commit `.env`.
+
 ---
 
-## STEP 10: Verify Everything Works
+## STEP 9: Verify Everything Works
 
 Run these checks in PowerShell:
 
-   python --version          # Should show Python 3.12.x
-   pip --version             # Should show pip version
-   psql --version            # Should show psql version
-   git --version             # Should show git version
+   python --version
+   pip --version
+   psql --version
+   git --version
    python -c "import flask; print('Flask OK')"
    python -c "import sqlalchemy; print('SQLAlchemy OK')"
    python -c "import bcrypt; print('bcrypt OK')"
    python -c "import reportlab; print('ReportLab OK')"
 
-All should return OK. If any fail, run:
-   pip install <package-name>
+All should return OK. If a dependency is missing, reinstall from `requirements.txt` rather than adding ad-hoc production dependencies.
 
 ---
 
-## WHAT'S NEXT
+## PRODUCTION NOTE
 
-Once setup is verified, Claude will provide the Phase 1 code:
-- app.py (Flask entry point)
-- config.py
-- models/ (User, Character, BuildSession)
-- routes/ (auth, admin, builder)
-- services/ (auth, SRD validation)
-- migrations/init_db.sql (full schema)
-- srd_data/ (SRD seed data + seed script)
-
-You will run the seed script once to populate the database with all
-SRD races, classes, backgrounds, equipment, spells, and feats.
+This guide is for local development. Do not deploy CharacterForge publicly until the repository's production Definition of Done is green, including secret handling, authentication/authorization regression tests, accessibility checks, printable-sheet regression, security headers, and production smoke tests.

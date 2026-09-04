@@ -1,12 +1,21 @@
 from __future__ import annotations
-import os
 import logging
+import os
 from flask import Flask, redirect, url_for, session
 from flask_session import Session
+from flask_wtf.csrf import CSRFProtect
 from config import Config
 from db import db
 
 logger = logging.getLogger(__name__)
+csrf = CSRFProtect()
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def create_app() -> Flask:
@@ -20,6 +29,7 @@ def create_app() -> Flask:
 
     Session(app)
     db.init_app(app)
+    csrf.init_app(app)
 
     from routes.auth import auth_bp
     from routes.admin import admin_bp
@@ -41,6 +51,15 @@ def create_app() -> Flask:
     # the existing application remains available while the wizard is hardened.
     app.register_blueprint(character_fixes_bp)
 
+    @app.after_request
+    def add_security_headers(response):
+        """Apply non-breaking browser hardening headers to every response."""
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
+        return response
+
     @app.get("/")
     def home():
         if not session.get("user_id"):
@@ -48,7 +67,7 @@ def create_app() -> Flask:
         role = session.get("role")
         if role == "admin":
             return redirect(url_for("admin.dashboard"))
-        elif role == "dm":
+        if role == "dm":
             return redirect(url_for("dm.dashboard"))
         return redirect(url_for("player.dashboard"))
 
@@ -64,4 +83,4 @@ if __name__ == "__main__":
         except Exception:
             logger.exception("Failed to initialize database tables")
             raise
-    app.run(host="127.0.0.1", port=port, debug=True)
+    app.run(host="127.0.0.1", port=port, debug=_env_flag("FLASK_DEBUG", default=False))

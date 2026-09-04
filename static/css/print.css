@@ -1,0 +1,118 @@
+@page {
+  size: letter portrait;
+  margin: 0.45in;
+}
+
+* {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+html,
+body {
+  background: #fff !important;
+  color: #111 !important;
+  min-height: auto !important;
+  background-image: none !important;
+}
+
+body {
+  font-size: 11pt !important;
+  line-height: 1.25 !important;
+}
+
+.topnav,
+.flash-wrap,
+.modal-overlay,
+.btn,
+.btn-logout,
+.confirm-action,
+script {
+  display: none !important;
+}
+
+.page-wrap {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.page-wrap > div {
+  max-width: none !important;
+}
+
+h1,
+h2,
+h3,
+.stat-bubble-val,
+.ability-block-score,
+.ability-block-mod,
+.skill-row-mod,
+.skill-row-name,
+.trait-text,
+.panel,
+.stat-bubble,
+.ability-block {
+  color: #111 !important;
+}
+
+.panel,
+.stat-bubble,
+.ability-block {
+  background: #fff !important;
+  border-color: #777 !important;
+  box-shadow: none !important;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.npc-badge,
+.feature-tag,
+.prof-dot.filled {
+  color: #111 !important;
+  border-color: #555 !important;
+}
+
+.prof-dot.filled {
+  background: #111 !important;
+}
+
+.hp-bar-track {
+  border: 1px solid #777 !important;
+  background: #fff !important;
+}
+
+.hp-bar-fill {
+  background: #555 !important;
+}
+
+a,
+a:visited {
+  color: #111 !important;
+  text-decoration: none !important;
+}
+
+/* Keep the core sheet columns intact on paper even when the browser viewport is narrow. */
+div[style*="grid-template-columns:180px"] {
+  grid-template-columns: 1.25in 1fr 1fr !important;
+  gap: 0.12in !important;
+}
+
+/* The combat summary should remain a compact row on paper. */
+div[style*="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))"] {
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 0.07in !important;
+}
+
+/* Avoid orphaning key blocks between pages. */
+.stat-bubble,
+.ability-block,
+.skill-row,
+.trait-block,
+.panel,
+h1,
+h2,
+h3 {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}

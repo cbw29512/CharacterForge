@@ -3,46 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>CharacterForge — First Launch Setup</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/a11y.css">
 </head>
 <body>
 <div class="login-wrap">
-  <div class="login-box">
-    <div class="login-title">⚔ CharacterForge</div>
+  <main class="login-box" aria-labelledby="setup-title">
+    <div class="login-title" id="setup-title">⚔ CharacterForge</div>
     <div class="login-sub">First Launch — Create Your Admin Account</div>
 
-    <div class="flash flash-ok" style="margin-bottom:16px">
+    <div class="flash flash-ok" role="status" style="margin-bottom:16px">
       No admin account exists yet. Set up your master administrator now.
     </div>
 
     {% with msgs = get_flashed_messages(with_categories=true) %}
       {% if msgs %}
         {% for cat, msg in msgs %}
-          <div class="flash flash-{{ cat }}" style="margin-bottom:12px">{{ msg }}</div>
+          <div class="flash flash-{{ cat }}" role="status" style="margin-bottom:12px">{{ msg }}</div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
     <form method="post" action="/auth/setup">
-      <label>Admin Username</label>
-      <input type="text" name="username" required autofocus placeholder="e.g. admin">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-      <label>Display Name</label>
-      <input type="text" name="display_name" placeholder="e.g. The Dungeon Master">
+      <label for="setup-username">Admin Username</label>
+      <input id="setup-username" type="text" name="username" autocomplete="username" required autofocus placeholder="e.g. admin">
 
-      <label>Password</label>
-      <input type="password" name="password" required placeholder="At least 6 characters">
+      <label for="setup-display-name">Display Name</label>
+      <input id="setup-display-name" type="text" name="display_name" autocomplete="name" placeholder="e.g. The Dungeon Master">
 
-      <label>Confirm Password</label>
-      <input type="password" name="confirm" required placeholder="Repeat password">
+      <label for="setup-password">Password</label>
+      <input id="setup-password" type="password" name="password" autocomplete="new-password" minlength="12" required placeholder="At least 12 characters">
+
+      <label for="setup-confirm">Confirm Password</label>
+      <input id="setup-confirm" type="password" name="confirm" autocomplete="new-password" minlength="12" required placeholder="Repeat password">
 
       <button type="submit" class="btn btn-primary" style="width:100%;margin-top:20px">
         Create Admin & Enter
       </button>
     </form>
-  </div>
+  </main>
 </div>
+<script src="/static/js/app.js"></script>
 </body>
 </html>
