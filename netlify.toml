@@ -1,0 +1,30 @@
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    Referrer-Policy = "no-referrer"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[redirects]]
+  from = "/login"
+  to = "/login.html"
+  status = 200
+
+[[redirects]]
+  from = "/setup"
+  to = "/setup.html"
+  status = 200
+
+[[redirects]]
+  from = "/app"
+  to = "/app.html"
+  status = 200
