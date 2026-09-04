@@ -11,6 +11,7 @@ on:
       - 'scripts/netlify_health_contract.test.mjs'
       - 'scripts/netlify_auth_contract.test.mjs'
       - 'scripts/netlify_auth_endpoints.test.mjs'
+      - 'scripts/netlify_guard_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - '.github/workflows/netlify-schema.yml'
   push:
@@ -24,6 +25,7 @@ on:
       - 'scripts/netlify_health_contract.test.mjs'
       - 'scripts/netlify_auth_contract.test.mjs'
       - 'scripts/netlify_auth_endpoints.test.mjs'
+      - 'scripts/netlify_guard_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - '.github/workflows/netlify-schema.yml'
   workflow_dispatch:
@@ -66,3 +68,6 @@ jobs:
 
       - name: Exercise bootstrap, login, session, and logout lifecycle
         run: node --test scripts/netlify_auth_endpoints.test.mjs
+
+      - name: Exercise reusable role and CSRF guards
+        run: node --test scripts/netlify_guard_contract.test.mjs
