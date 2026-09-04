@@ -24,6 +24,7 @@ on:
       - 'scripts/netlify_srd_contract.test.mjs'
       - 'scripts/netlify_character_create_contract.test.mjs'
       - 'scripts/netlify_templates_contract.test.mjs'
+      - 'scripts/netlify_admin_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - 'tests/test_shared_srd_parity.py'
       - 'tests/test_character_srd_validation.py'
@@ -53,6 +54,7 @@ on:
       - 'scripts/netlify_srd_contract.test.mjs'
       - 'scripts/netlify_character_create_contract.test.mjs'
       - 'scripts/netlify_templates_contract.test.mjs'
+      - 'scripts/netlify_admin_contract.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - 'tests/test_shared_srd_parity.py'
       - 'tests/test_character_srd_validation.py'
@@ -66,7 +68,7 @@ permissions:
 jobs:
   schema-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -134,3 +136,6 @@ jobs:
 
       - name: Exercise template ownership and lifecycle contract
         run: node --test scripts/netlify_templates_contract.test.mjs
+
+      - name: Exercise admin user-management lifecycle contract
+        run: node --test scripts/netlify_admin_contract.test.mjs
