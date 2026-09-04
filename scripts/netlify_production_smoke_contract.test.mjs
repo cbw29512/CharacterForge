@@ -102,7 +102,7 @@ test('production smoke refuses implicit or malformed targets', async () => {
     env: { ...process.env, CHARACTERFORGE_EXPECTED_SHA: expectedSha },
   }), /CHARACTERFORGE_SITE_URL is required/);
   await assert.rejects(smoke({ CHARACTERFORGE_EXPECTED_SHA: 'short' }), /full 40-character Git SHA/);
-  await assert.rejects(smoke({ CHARACTERFORGE_SITE_URL: 'http://example.com' }), /site URL must use HTTPS/);
+  await assert.rejects(smoke({ CHARACTERFORGE_SITE_URL: 'http://example.com' }), /HTTP smoke is allowed only for localhost tests/);
 });
 
 test('manual production smoke workflow is verification-only and cannot deploy', async () => {
