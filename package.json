@@ -8,11 +8,13 @@
   },
   "scripts": {
     "test:netlify-db": "node --test scripts/netlify_db_contract.test.mjs",
-    "test:netlify-health": "node --test scripts/netlify_health_contract.test.mjs"
+    "test:netlify-health": "node --test scripts/netlify_health_contract.test.mjs",
+    "test:netlify-auth": "node --test scripts/netlify_auth_contract.test.mjs"
   },
   "dependencies": {
     "@netlify/database": "2.0.0",
-    "@netlify/functions": "6.0.0"
+    "@netlify/functions": "6.0.0",
+    "bcrypt": "6.0.0"
   },
   "devDependencies": {
     "@netlify/database-dev": "1.0.1",
