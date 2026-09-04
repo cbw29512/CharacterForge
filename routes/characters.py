@@ -148,17 +148,29 @@ def create():
         flash("You don't have permission to create a character in that campaign.", "error")
         return redirect(url_for("player.dashboard" if role == "player" else "dm.dashboard"))
 
+    def parse_int(value, fallback):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return fallback
+
     def score(key):
-        return max(1, min(30, int(f.get(key, 10) or 10)))
+        return max(1, min(30, parse_int(f.get(key, 10) or 10, 10)))
 
     race_name = f.get("race", "Human")
     class_name = f.get("char_class", "Fighter")
     bg_name = f.get("background", "Soldier")
-    level = max(1, min(30, int(f.get("level", 1) or 1)))
+    level = max(1, min(30, parse_int(f.get("level", 1) or 1, 1)))
     alignment = f.get("alignment", "True Neutral")
 
-    srd_class = srd_service.get_class(class_name) or {}
-    hit_die = srd_class.get("hit_die", "d8")
+    srd_race = srd_service.get_race(race_name)
+    srd_class = srd_service.get_class(class_name)
+    bg = srd_service.get_background(bg_name)
+    if not srd_race or not srd_class or not bg or alignment not in srd_service.SRD_ALIGNMENTS:
+        flash("Choose a supported SRD race, class, background, and alignment.", "error")
+        return redirect(url_for("characters.new", campaign_id=campaign_id, npc=str(is_npc).lower()))
+
+    hit_die = srd_class["hit_die"]
     prof = srd_service.proficiency_bonus(min(level, 20))
     con_score = score("constitution")
     dex_score = score("dexterity")
@@ -168,12 +180,14 @@ def create():
     auto_hp = max(1, hit_die_val + con_mod + (level - 1) * (hit_die_val // 2 + 1 + con_mod))
     auto_ac = 10 + dex_mod
 
-    hp_override = f.get("hp_override", "").strip()
-    ac_override = f.get("armor_class_override", "").strip()
-    max_hp = int(hp_override) if hp_override and hp_override.lstrip('-').isdigit() else auto_hp
+    hp_override = (f.get("hp_override") or "").strip()
+    ac_override = (f.get("armor_class_override") or "").strip()
+    max_hp = parse_int(hp_override, auto_hp) if hp_override else auto_hp
     max_hp = max(1, max_hp)
-    armor_class = int(ac_override) if ac_override and ac_override.lstrip('-').isdigit() else auto_ac
-    speed = max(0, int(f.get("speed", 30) or 30))
+    armor_class = parse_int(ac_override, auto_ac) if ac_override else auto_ac
+    armor_class = max(0, armor_class)
+    speed = max(0, parse_int(f.get("speed", 30) or 30, 30))
+    char_name = (f.get("name") or "").strip() or "(unnamed)"
 
     personality_trait = f.get("personality_trait", "")
     ideal = f.get("ideal", "")
@@ -190,7 +204,7 @@ def create():
         owner_id=uid,
         campaign_id=campaign_id,
         is_npc=is_npc,
-        name=(f.get("name") or "(unnamed)").strip(),
+        name=char_name,
         level=level,
         char_class=class_name,
         race=race_name,
@@ -213,17 +227,16 @@ def create():
         traits_json=traits_json,
     )
 
-    bg = srd_service.get_background(bg_name) or {}
-    skills_dict = {s: True for s in bg.get("skill_proficiencies", [])}
+    skills_dict = {s: True for s in bg["skill_proficiencies"]}
     char.skills_json = json.dumps(skills_dict)
-    char.equipment_json = json.dumps(bg.get("equipment", []))
+    char.equipment_json = json.dumps(bg["equipment"])
 
     feats = []
     for lvl in range(1, min(level, 20) + 1):
         feats.extend(srd_class.get("features_by_level", {}).get(lvl, []))
     char.features_json = json.dumps(feats)
 
-    saves = srd_class.get("saving_throws", [])
+    saves = srd_class["saving_throws"]
     char.saving_throws_json = json.dumps({s: True for s in saves})
 
     db.session.add(char)

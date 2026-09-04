@@ -24,6 +24,20 @@ export async function canAccessCampaign(session: Session, campaignId: number) {
   return Boolean(result.rowCount);
 }
 
+export async function canCreateInCampaign(session: Session, campaignId: number | null, isNpc: boolean) {
+  if (!campaignId) return true;
+  if (session.role === 'admin') {
+    const exists = await getPool().query(`SELECT 1 FROM campaigns WHERE id = $1 LIMIT 1`, [campaignId]);
+    return Boolean(exists.rowCount);
+  }
+  if (isNpc) {
+    if (session.role !== 'dm') return false;
+    const owned = await getPool().query(`SELECT 1 FROM campaigns WHERE id = $1 AND dm_id = $2 LIMIT 1`, [campaignId, session.id]);
+    return Boolean(owned.rowCount);
+  }
+  return canAccessCampaign(session, campaignId);
+}
+
 export async function canViewCharacter(session: Session, character: CharacterAccessRow) {
   if (session.role === 'admin' || character.owner_id === session.id) return true;
   if (!character.campaign_id) return false;
