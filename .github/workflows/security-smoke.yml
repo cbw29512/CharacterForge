@@ -12,7 +12,7 @@ permissions:
 jobs:
   security-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       SECRET_KEY: characterforge-ci-secret-0123456789-abcdefghijklmnopqrstuvwxyz
       DATABASE_URL: sqlite:////tmp/characterforge-ci.sqlite3
@@ -41,7 +41,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Install browser accessibility tooling
-        run: npm install --no-save pa11y@9.1.1
+        run: npm install --no-save pa11y@10.0.0
 
       - name: Compile Python sources
         run: python -m compileall -q .
@@ -210,6 +210,9 @@ jobs:
           CI_AUDIT_ROLE: player
           CI_AUDIT_PATH: /characters/${{ env.CI_CHARACTER_ID }}/sheet
         run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
+
+      - name: Browser mobile, desktop, and printable-sheet regression
+        run: node scripts/browser_release_checks.cjs
 
       - name: Show server log on failure
         if: failure()
