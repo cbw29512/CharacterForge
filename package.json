@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build:netlify": "node scripts/write_netlify_build_info.mjs",
+    "smoke:netlify": "node scripts/netlify_production_smoke.mjs",
     "test:netlify-db": "node --test scripts/netlify_db_contract.test.mjs",
     "test:netlify-health": "node --test scripts/netlify_health_contract.test.mjs",
     "test:netlify-auth": "node --test scripts/netlify_auth_contract.test.mjs"
