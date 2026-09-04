@@ -95,20 +95,28 @@ test('approved player sees campaign characters without manager-only membership d
   assert.deepEqual(body.pending, []);
 });
 
-test('owning DM sees approved and pending membership identities', async () => {
+test('owning DM sees approved and pending membership identities with owner marker', async () => {
   const response = await viewCampaign(requestFor('view-dm'));
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.is_dm, true);
-  assert.equal(body.members.some((row) => row.username === 'view-player'), true);
+  const owner = body.members.find((row) => row.username === 'view-dm');
+  assert.ok(owner);
+  assert.equal(owner.is_owner, true);
+  const player = body.members.find((row) => row.username === 'view-player');
+  assert.ok(player);
+  assert.equal(player.is_owner, false);
   assert.equal(body.pending.length, 1);
   assert.equal(body.pending[0].username, 'view-pending');
+  assert.equal(body.pending[0].is_owner, false);
 });
 
 test('admin receives manager view and outsider is forbidden', async () => {
   const admin = await viewCampaign(requestFor('view-admin'));
   assert.equal(admin.status, 200);
-  assert.equal((await admin.json()).is_dm, true);
+  const adminBody = await admin.json();
+  assert.equal(adminBody.is_dm, true);
+  assert.equal(adminBody.members.find((row) => row.username === 'view-dm').is_owner, true);
 
   const outsider = await viewCampaign(requestFor('view-outsider'));
   assert.equal(outsider.status, 403);

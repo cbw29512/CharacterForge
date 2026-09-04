@@ -68,11 +68,13 @@ class NetlifyFrontendContractTests(unittest.TestCase):
         self.assertIn("/api/templates?npc=", templates)
         self.assertIn("/api/templates/delete", templates)
 
-    def test_character_controls_consume_server_capabilities(self):
+    def test_character_and_campaign_controls_consume_server_capabilities(self):
         campaign = (SITE / "assets" / "campaign.js").read_text(encoding="utf-8")
         character = (SITE / "assets" / "character.js").read_text(encoding="utf-8")
         self.assertIn("data.can_create_pc", campaign)
         self.assertIn("data.can_create_npc", campaign)
+        self.assertIn("member.is_owner", campaign)
+        self.assertNotIn("member.membership_role !== 'dm'", campaign)
         self.assertIn("data.can_delete", character)
         self.assertIn("data.can_save_template", character)
 
