@@ -167,6 +167,7 @@ jobs:
         env:
           CI_AUDIT_USERNAME: ${{ env.CI_ADMIN_USERNAME }}
           CI_AUDIT_PASSWORD: ${{ env.CI_ADMIN_PASSWORD }}
+          CI_AUDIT_ROLE: admin
           CI_AUDIT_PATH: /admin/
         run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
 
@@ -174,6 +175,7 @@ jobs:
         env:
           CI_AUDIT_USERNAME: ${{ env.CI_DM_USERNAME }}
           CI_AUDIT_PASSWORD: ${{ env.CI_DM_PASSWORD }}
+          CI_AUDIT_ROLE: dm
           CI_AUDIT_PATH: /dm/
         run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
 
@@ -181,6 +183,7 @@ jobs:
         env:
           CI_AUDIT_USERNAME: ${{ env.CI_PLAYER_USERNAME }}
           CI_AUDIT_PASSWORD: ${{ env.CI_PLAYER_PASSWORD }}
+          CI_AUDIT_ROLE: player
           CI_AUDIT_PATH: /player/
         run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
 
@@ -188,6 +191,7 @@ jobs:
         env:
           CI_AUDIT_USERNAME: ${{ env.CI_DM_USERNAME }}
           CI_AUDIT_PASSWORD: ${{ env.CI_DM_PASSWORD }}
+          CI_AUDIT_ROLE: dm
           CI_AUDIT_PATH: /campaigns/${{ env.CI_CAMPAIGN_ID }}
         run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
 
@@ -195,6 +199,7 @@ jobs:
         env:
           CI_AUDIT_USERNAME: ${{ env.CI_PLAYER_USERNAME }}
           CI_AUDIT_PASSWORD: ${{ env.CI_PLAYER_PASSWORD }}
+          CI_AUDIT_ROLE: player
           CI_AUDIT_PATH: /characters/new
         run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
 
@@ -202,6 +207,7 @@ jobs:
         env:
           CI_AUDIT_USERNAME: ${{ env.CI_PLAYER_USERNAME }}
           CI_AUDIT_PASSWORD: ${{ env.CI_PLAYER_PASSWORD }}
+          CI_AUDIT_ROLE: player
           CI_AUDIT_PATH: /characters/${{ env.CI_CHARACTER_ID }}/sheet
         run: npx pa11y --config pa11y-authenticated.cjs http://127.0.0.1:5050/auth/login
 
