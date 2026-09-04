@@ -1,6 +1,7 @@
 :root {
-  /* WCAG AA-safe muted text on CharacterForge dark surfaces. */
+  /* WCAG AA-safe text tokens on CharacterForge dark surfaces. */
   --text-dim: #a9a18f;
+  --red-light: #ff8f8f;
 }
 
 :focus-visible {
