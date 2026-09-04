@@ -1,15 +1,30 @@
 from __future__ import annotations
 from flask import Blueprint, render_template, redirect, url_for, session, flash, request, jsonify
 from db import db
-from models import Character, CharacterTemplate
+from models import Campaign, Character, CharacterTemplate
 
 templates_bp = Blueprint("templates", __name__, url_prefix="/templates")
+
 
 def _require_login():
     if not session.get("user_id"):
         flash("Please log in.", "error")
         return False
     return True
+
+
+def _can_save_as_template(char: Character) -> bool:
+    uid = session.get("user_id")
+    role = session.get("role")
+    if role == "admin":
+        return True
+    if char.owner_id == uid:
+        return True
+    if role == "dm" and char.campaign_id:
+        campaign = Campaign.query.get(char.campaign_id)
+        return bool(campaign and campaign.dm_id == uid)
+    return False
+
 
 @templates_bp.get("/")
 def library():
@@ -26,6 +41,7 @@ def library():
         npc_templates = []
     return render_template("templates/library.html", pc_templates=pc_templates, npc_templates=npc_templates)
 
+
 @templates_bp.post("/save_from_char/<int:char_id>")
 def save_from_char(char_id: int):
     """Save an existing character as a template."""
@@ -33,21 +49,9 @@ def save_from_char(char_id: int):
         return redirect(url_for("auth.login_get"))
     char = Character.query.get_or_404(char_id)
     uid = session.get("user_id")
-    role = session.get("role")
 
-    # Permission: admin can save anything, DM can save NPCs + their own chars, player can save their own chars
-    if role == "admin":
-        allowed = True
-    elif role == "dm" and char.is_npc:
-        allowed = True  # DMs can save any NPC as a template
-    elif role == "dm" and char.campaign_id:
-        from models import Campaign
-        campaign = Campaign.query.get(char.campaign_id)
-        allowed = campaign and campaign.dm_id == uid
-    else:
-        allowed = char.owner_id == uid
-    if not allowed:
-        flash("You can only save your own characters or NPCs as templates.", "error")
+    if not _can_save_as_template(char):
+        flash("You can only save characters or NPCs you own or manage.", "error")
         return redirect(url_for("characters.sheet", cid=char_id))
 
     template_name = (request.form.get("template_name") or "").strip()
@@ -56,18 +60,18 @@ def save_from_char(char_id: int):
         flash("Template name required.", "error")
         return redirect(url_for("characters.sheet", cid=char_id))
 
-    # Check for duplicate name
     existing = CharacterTemplate.query.filter_by(owner_id=uid, name=template_name).first()
     if existing:
         flash(f"You already have a template named '{template_name}'. Choose a different name.", "error")
         return redirect(url_for("characters.sheet", cid=char_id))
 
     tmpl = char.to_template(template_name, description)
-    tmpl.owner_id = uid  # Always the logged-in user, even for NPCs (owner_id on char is None for NPCs)
+    tmpl.owner_id = uid
     db.session.add(tmpl)
     db.session.commit()
     flash(f"Saved as template '{template_name}'! Find it in your Template Library.", "ok")
     return redirect(url_for("characters.sheet", cid=char_id))
+
 
 @templates_bp.get("/api/list")
 def api_list():
@@ -80,6 +84,7 @@ def api_list():
         .order_by(CharacterTemplate.times_used.desc()).all()
     return jsonify([t.to_dict() for t in tmpls])
 
+
 @templates_bp.post("/api/use/<int:tmpl_id>")
 def api_use(tmpl_id: int):
     """Mark a template as used and return its data."""
@@ -91,6 +96,7 @@ def api_use(tmpl_id: int):
     tmpl.times_used += 1
     db.session.commit()
     return jsonify({"ok": True, "template": tmpl.to_dict()})
+
 
 @templates_bp.post("/<int:tmpl_id>/delete")
 def delete(tmpl_id: int):
