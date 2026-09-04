@@ -10,6 +10,7 @@ on:
       - 'scripts/netlify_db_contract.test.mjs'
       - 'scripts/netlify_health_contract.test.mjs'
       - 'scripts/netlify_auth_contract.test.mjs'
+      - 'scripts/netlify_auth_endpoints.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - '.github/workflows/netlify-schema.yml'
   push:
@@ -22,6 +23,7 @@ on:
       - 'scripts/netlify_db_contract.test.mjs'
       - 'scripts/netlify_health_contract.test.mjs'
       - 'scripts/netlify_auth_contract.test.mjs'
+      - 'scripts/netlify_auth_endpoints.test.mjs'
       - 'tests/test_netlify_schema_contract.py'
       - '.github/workflows/netlify-schema.yml'
   workflow_dispatch:
@@ -61,3 +63,6 @@ jobs:
 
       - name: Exercise auth primitives and durable session contract
         run: node --test scripts/netlify_auth_contract.test.mjs
+
+      - name: Exercise bootstrap, login, session, and logout lifecycle
+        run: node --test scripts/netlify_auth_endpoints.test.mjs
