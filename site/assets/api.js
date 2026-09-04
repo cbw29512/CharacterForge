@@ -38,7 +38,12 @@ export function messageFor(error){
     password_too_short:'Password must be at least 12 characters.',
     password_mismatch:'The password confirmation does not match.',
     username_unavailable:'That username is unavailable.',
+    membership_exists:'You already have a pending or active membership for that campaign.',
+    forbidden:'Your account is not allowed to perform that action.',
+    not_found:'That item is no longer available.',
+    invalid_input:'Check the form values and try again.',
     unauthorized:'Your session has expired. Please sign in again.',
+    csrf_missing:'Refresh the page before submitting this change.',
     csrf_invalid:'Your security token is stale. Refresh the page and try again.',
     service_unavailable:'CharacterForge is temporarily unavailable.'
   };

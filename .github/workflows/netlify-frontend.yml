@@ -53,3 +53,4 @@ jobs:
           npx pa11y --config .pa11y.json http://127.0.0.1:4174/login.html
           npx pa11y --config .pa11y.json http://127.0.0.1:4174/setup.html
           npx pa11y --config .pa11y.json http://127.0.0.1:4174/app.html
+          npx pa11y --config .pa11y.json 'http://127.0.0.1:4174/campaign.html?id=1'
