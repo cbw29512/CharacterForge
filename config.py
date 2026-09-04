@@ -13,6 +13,13 @@ _FORBIDDEN_SECRET_KEYS = {
 }
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def resolve_secret_key() -> str:
     """Return a configured application secret or fail closed.
 
@@ -36,9 +43,15 @@ class Config:
         f"sqlite:///{BASE_DIR / 'data' / 'characterforge.sqlite3'}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     SESSION_TYPE = "filesystem"
     SESSION_FILE_DIR = str(BASE_DIR / "data" / "sessions")
     SESSION_PERMANENT = False
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    # Local HTTP development stays usable; production must set this true behind HTTPS.
+    SESSION_COOKIE_SECURE = _env_flag("SESSION_COOKIE_SECURE", default=False)
+
     UPLOAD_FOLDER = str(BASE_DIR / "uploads")
     MAX_CONTENT_LENGTH = 20 * 1024 * 1024
     OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:4242")
