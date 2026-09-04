@@ -28,10 +28,20 @@ export default async function changeAdminUserRole(request: Request): Promise<Res
     const targetResult = await client.query(`SELECT id, username, role, display_name FROM users WHERE id = $1 FOR UPDATE`, [userId]);
     const target = targetResult.rows[0];
     if (!target) { await client.query('ROLLBACK'); return json({ error: 'not_found' }, 404); }
+
     if (target.role === 'admin' && role !== 'admin') {
       const count = await client.query(`SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin'`);
       if (count.rows[0].count <= 1) { await client.query('ROLLBACK'); return json({ error: 'last_admin_required' }, 409); }
     }
+
+    if (role === 'player') {
+      const campaigns = await client.query(`SELECT COUNT(*)::int AS count FROM campaigns WHERE dm_id = $1`, [userId]);
+      if (campaigns.rows[0].count > 0) {
+        await client.query('ROLLBACK');
+        return json({ error: 'user_owns_campaigns', campaign_count: campaigns.rows[0].count }, 409);
+      }
+    }
+
     const updated = await client.query(
       `UPDATE users SET role = $1 WHERE id = $2 RETURNING id, username, role, display_name, created_at`,
       [role, userId],
