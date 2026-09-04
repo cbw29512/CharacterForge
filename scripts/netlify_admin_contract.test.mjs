@@ -41,10 +41,7 @@ before(async () => {
       );
       users[key] = result.rows[0].id;
     }
-    await client.query(
-      `INSERT INTO campaigns (name, dm_id) VALUES ('Owned Campaign', $1)`,
-      [users.dm],
-    );
+    await client.query(`INSERT INTO campaigns (name, dm_id) VALUES ('Owned Campaign', $1)`, [users.dm]);
   } finally {
     await client.end();
   }
@@ -71,11 +68,7 @@ function requestFor(key, url, method = 'GET', body, includeCsrf = true) {
   const headers = { cookie: `__Host-cf_session=${encodeURIComponent(session.token)}` };
   if (includeCsrf) headers['x-csrf-token'] = session.csrf;
   if (body !== undefined) headers['content-type'] = 'application/json';
-  return new Request(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  return new Request(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
 }
 
 async function dbQuery(text, params = []) {
@@ -88,7 +81,6 @@ async function dbQuery(text, params = []) {
 test('admin overview is admin-only and never exposes password/session secrets', async () => {
   const denied = await overview(requestFor('player', 'http://localhost/api/admin/overview'));
   assert.equal(denied.status, 403);
-
   const response = await overview(requestFor('admin', 'http://localhost/api/admin/overview'));
   assert.equal(response.status, 200);
   const body = await response.json();
@@ -105,7 +97,6 @@ test('admin creation requires CSRF and enforces case-insensitive usernames', asy
     username: 'Created-User', password: 'correct horse battery staple', role: 'player',
   }, false));
   assert.equal(noCsrf.status, 403);
-
   const created = await createUser(requestFor('admin', 'http://localhost/api/admin/users/create', 'POST', {
     username: 'Created-User', display_name: 'Created User', password: 'correct horse battery staple', role: 'player',
   }));
@@ -114,7 +105,6 @@ test('admin creation requires CSRF and enforces case-insensitive usernames', asy
   assert.equal(createdBody.user.username, 'created-user');
   assert.equal(createdBody.user.role, 'player');
   assert.equal('password_hash' in createdBody.user, false);
-
   const duplicate = await createUser(requestFor('admin', 'http://localhost/api/admin/users/create', 'POST', {
     username: 'CREATED-USER', password: 'another secure password', role: 'player',
   }));
@@ -122,12 +112,21 @@ test('admin creation requires CSRF and enforces case-insensitive usernames', asy
   assert.deepEqual(await duplicate.json(), { error: 'username_unavailable' });
 });
 
-test('role changes are immediate and the last admin cannot be demoted', async () => {
+test('role changes are immediate and preserve admin/campaign ownership invariants', async () => {
   const demoteSecondary = await changeRole(requestFor('admin', 'http://localhost/api/admin/users/role', 'POST', {
     user_id: users.admin2, role: 'dm',
   }));
   assert.equal(demoteSecondary.status, 200);
   assert.equal((await getSession(sessions.admin2.token)).role, 'dm');
+
+  const campaignOwner = await changeRole(requestFor('admin', 'http://localhost/api/admin/users/role', 'POST', {
+    user_id: users.dm, role: 'player',
+  }));
+  assert.equal(campaignOwner.status, 409);
+  const ownerBody = await campaignOwner.json();
+  assert.equal(ownerBody.error, 'user_owns_campaigns');
+  assert.equal(ownerBody.campaign_count, 1);
+  assert.equal((await getSession(sessions.dm.token)).role, 'dm');
 
   const lastAdmin = await changeRole(requestFor('admin', 'http://localhost/api/admin/users/role', 'POST', {
     user_id: users.admin, role: 'player',
@@ -149,23 +148,15 @@ test('password reset revokes every active target session', async () => {
 });
 
 test('user deletion protects self, last admin, and campaign owners', async () => {
-  const self = await deleteUser(requestFor('admin', 'http://localhost/api/admin/users/delete', 'POST', {
-    user_id: users.admin,
-  }));
+  const self = await deleteUser(requestFor('admin', 'http://localhost/api/admin/users/delete', 'POST', { user_id: users.admin }));
   assert.equal(self.status, 409);
   assert.deepEqual(await self.json(), { error: 'cannot_delete_self' });
-
-  const owner = await deleteUser(requestFor('admin', 'http://localhost/api/admin/users/delete', 'POST', {
-    user_id: users.dm,
-  }));
+  const owner = await deleteUser(requestFor('admin', 'http://localhost/api/admin/users/delete', 'POST', { user_id: users.dm }));
   assert.equal(owner.status, 409);
   const ownerBody = await owner.json();
   assert.equal(ownerBody.error, 'user_owns_campaigns');
   assert.equal(ownerBody.campaign_count, 1);
-
-  const deleted = await deleteUser(requestFor('admin', 'http://localhost/api/admin/users/delete', 'POST', {
-    user_id: users.deleteMe,
-  }));
+  const deleted = await deleteUser(requestFor('admin', 'http://localhost/api/admin/users/delete', 'POST', { user_id: users.deleteMe }));
   assert.equal(deleted.status, 200);
   const check = await dbQuery(`SELECT COUNT(*)::int AS count FROM users WHERE id = $1`, [users.deleteMe]);
   assert.equal(check.rows[0].count, 0);
