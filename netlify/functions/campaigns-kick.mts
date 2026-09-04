@@ -21,6 +21,10 @@ export default async function kickCampaignMember(request: Request): Promise<Resp
 
   try {
     if (!(await canManageCampaign(auth.session, campaignId))) return json({ error: 'forbidden' }, 403);
+    const campaign = await getPool().query(`SELECT dm_id FROM campaigns WHERE id = $1 LIMIT 1`, [campaignId]);
+    if (!campaign.rowCount) return json({ error: 'not_found' }, 404);
+    if (campaign.rows[0].dm_id === userId) return json({ error: 'owner_membership_required' }, 409);
+
     const result = await getPool().query(
       `DELETE FROM campaign_memberships
        WHERE campaign_id = $1 AND user_id = $2
