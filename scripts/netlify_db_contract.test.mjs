@@ -133,3 +133,25 @@ test('structured character fields round-trip as jsonb', async () => {
     assert.deepEqual(rows[0].features, ['Second Wind']);
   });
 });
+
+test('character updated_at advances automatically on update', async () => {
+  await withClient(async (client) => {
+    const owner = await client.query(
+      `INSERT INTO users (username, password_hash, role) VALUES ($1, $2, 'player') RETURNING id`,
+      ['timestamp-owner', 'hash'],
+    );
+    const created = await client.query(
+      `INSERT INTO characters (owner_id, name) VALUES ($1, $2) RETURNING id, updated_at`,
+      [owner.rows[0].id, 'Timestamp Fighter'],
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const updated = await client.query(
+      `UPDATE characters SET notes = $1 WHERE id = $2 RETURNING updated_at`,
+      ['changed', created.rows[0].id],
+    );
+    assert.ok(
+      new Date(updated.rows[0].updated_at).getTime() > new Date(created.rows[0].updated_at).getTime(),
+      'updated_at should advance without application-side timestamp code',
+    );
+  });
+});
