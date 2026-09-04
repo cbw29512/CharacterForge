@@ -3,8 +3,12 @@
 // Role selector on login page
 document.querySelectorAll('.role-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.role-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
     btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
     const roleInput = document.getElementById('role-input');
     if (roleInput) roleInput.value = btn.dataset.role;
   });
