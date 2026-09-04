@@ -1,0 +1,82 @@
+.frontend-center {
+  min-height: 75vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+
+.frontend-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.frontend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.frontend-card {
+  border: 1px solid rgba(201, 168, 76, 0.35);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 18px;
+  background: rgba(15, 18, 24, 0.86);
+}
+
+.frontend-card h2,
+.frontend-card h3 {
+  margin-top: 0;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.role-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 14px;
+}
+
+.nav-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+
+.nav-button:hover,
+.nav-button:focus-visible {
+  text-decoration: underline;
+}
+
+.frontend-empty {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.frontend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.95rem;
+  opacity: 0.88;
+}
+
+@media (max-width: 720px) {
+  .frontend-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .topnav {
+    flex-wrap: wrap;
+  }
+}
