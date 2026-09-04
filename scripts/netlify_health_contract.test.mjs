@@ -6,6 +6,7 @@ import { NetlifyDB } from '@netlify/database-dev';
 let db;
 let connectionString;
 let health;
+let closeDatabaseForTests;
 const originalDatabaseUrl = process.env.NETLIFY_DB_URL;
 
 before(async () => {
@@ -13,10 +14,11 @@ before(async () => {
   connectionString = await db.start();
   await db.applyMigrations('./netlify/database/migrations');
   process.env.NETLIFY_DB_URL = connectionString;
-  ({ default: health } = await import('../netlify/functions/health.mts'));
+  ({ default: health, closeDatabaseForTests } = await import('../netlify/functions/health.mts'));
 });
 
 after(async () => {
+  if (closeDatabaseForTests) await closeDatabaseForTests();
   if (originalDatabaseUrl === undefined) delete process.env.NETLIFY_DB_URL;
   else process.env.NETLIFY_DB_URL = originalDatabaseUrl;
   if (db) await db.stop();
