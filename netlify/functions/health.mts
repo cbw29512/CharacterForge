@@ -2,6 +2,15 @@ import { getDatabase } from '@netlify/database';
 import type { Config } from '@netlify/functions';
 
 const REQUIRED_TABLE_COUNT = 5;
+let database: ReturnType<typeof getDatabase> | null = null;
+
+function databaseClient(): ReturnType<typeof getDatabase> {
+  if (!database) {
+    const connectionString = process.env.NETLIFY_DB_URL;
+    database = getDatabase(connectionString ? { connectionString } : undefined);
+  }
+  return database;
+}
 
 function jsonResponse(body: unknown, status = 200): Response {
   return Response.json(body, {
@@ -13,14 +22,19 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+export async function closeDatabaseForTests(): Promise<void> {
+  if (!database) return;
+  await database.pool.end();
+  database = null;
+}
+
 export default async function health(request: Request): Promise<Response> {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return jsonResponse({ ok: false, error: 'method_not_allowed' }, 405);
   }
 
   try {
-    const connectionString = process.env.NETLIFY_DB_URL;
-    const db = getDatabase(connectionString ? { connectionString } : undefined);
+    const db = databaseClient();
     const rows = await db.sql<{ table_count: number }>`
       SELECT COUNT(*)::int AS table_count
       FROM information_schema.tables
