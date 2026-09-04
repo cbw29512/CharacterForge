@@ -19,6 +19,7 @@ on:
       - 'scripts/netlify_campaigns_contract.test.mjs'
       - 'scripts/netlify_campaign_view_contract.test.mjs'
       - 'scripts/netlify_characters_contract.test.mjs'
+      - 'scripts/netlify_character_frontend_contract.test.mjs'
       - 'scripts/netlify_srd_contract.test.mjs'
       - 'scripts/netlify_character_create_contract.test.mjs'
       - 'scripts/netlify_templates_contract.test.mjs'
@@ -46,6 +47,7 @@ on:
       - 'scripts/netlify_campaigns_contract.test.mjs'
       - 'scripts/netlify_campaign_view_contract.test.mjs'
       - 'scripts/netlify_characters_contract.test.mjs'
+      - 'scripts/netlify_character_frontend_contract.test.mjs'
       - 'scripts/netlify_srd_contract.test.mjs'
       - 'scripts/netlify_character_create_contract.test.mjs'
       - 'scripts/netlify_templates_contract.test.mjs'
@@ -115,6 +117,9 @@ jobs:
 
       - name: Exercise protected character read/delete contract
         run: node --test scripts/netlify_characters_contract.test.mjs
+
+      - name: Exercise character frontend API dependencies
+        run: node --test scripts/netlify_character_frontend_contract.test.mjs
 
       - name: Exercise Netlify SRD catalog and math contract
         run: node --test scripts/netlify_srd_contract.test.mjs
