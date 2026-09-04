@@ -47,9 +47,8 @@ pages = len(reader.pages)
 if pages < 1 or pages > 3:
     raise SystemExit(f"Unexpected character PDF page count: {pages}")
 text = "\n".join((page.extract_text() or "") for page in reader.pages)
-for required in ("A11y Test Fighter", "Armor Class", "Skills"):
-    if required not in text:
-        raise SystemExit(f"Generated PDF is missing expected text: {required}")
+if "A11y Test Fighter" not in text:
+    raise SystemExit("Generated PDF is missing the character name")
 print(pages)
 `;
   const output = execFileSync('python', ['-c', validator, path], { encoding: 'utf8' }).trim();
@@ -71,6 +70,10 @@ print(pages)
     await page.goto(`${baseUrl}/characters/${characterId}/sheet`, { waitUntil: 'networkidle0' });
     const heading = await page.$eval('h1', el => el.textContent.trim());
     if (heading !== 'A11y Test Fighter') throw new Error(`Unexpected character sheet heading: ${heading}`);
+    const sheetText = await page.$eval('.page-wrap', el => el.innerText);
+    for (const expected of ['Armor Class', 'Skills', 'A11y Test Fighter']) {
+      if (!sheetText.includes(expected)) throw new Error(`Rendered character sheet is missing expected text: ${expected}`);
+    }
 
     await page.emulateMediaType('print');
     const pdf = await page.pdf({ format: 'Letter', printBackground: true, preferCSSPageSize: true });
