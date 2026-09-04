@@ -31,3 +31,5 @@ The smoke checker fails unless all of these are true:
 6. The health response remains non-cacheable.
 
 The workflow has read-only repository permissions and contains no deploy command, Netlify auth token, or site ID.
+
+For the first intentional deployment, follow `docs/NETLIFY_DEPLOY_CHECKLIST.md` and require this smoke check to pass before treating the deployment as production-ready.
