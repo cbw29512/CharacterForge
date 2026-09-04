@@ -70,9 +70,14 @@ print(pages)
     await page.goto(`${baseUrl}/characters/${characterId}/sheet`, { waitUntil: 'networkidle0' });
     const heading = await page.$eval('h1', el => el.textContent.trim());
     if (heading !== 'A11y Test Fighter') throw new Error(`Unexpected character sheet heading: ${heading}`);
-    const sheetText = await page.$eval('.page-wrap', el => el.innerText);
-    for (const expected of ['Armor Class', 'Skills', 'A11y Test Fighter']) {
-      if (!sheetText.includes(expected)) throw new Error(`Rendered character sheet is missing expected text: ${expected}`);
+
+    const statLabels = await page.$$eval('.stat-bubble-label', els => els.map(el => el.textContent.trim()));
+    if (!statLabels.includes('Armor Class')) {
+      throw new Error(`Rendered character sheet is missing Armor Class label; found: ${statLabels.join(', ')}`);
+    }
+    const sectionHeadings = await page.$$eval('h3', els => els.map(el => el.textContent.trim()));
+    if (!sectionHeadings.includes('Skills')) {
+      throw new Error(`Rendered character sheet is missing Skills heading; found: ${sectionHeadings.join(', ')}`);
     }
 
     await page.emulateMediaType('print');
