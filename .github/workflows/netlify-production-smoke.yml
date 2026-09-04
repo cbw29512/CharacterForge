@@ -1,0 +1,33 @@
+name: CharacterForge Netlify Production Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Exact deployed CharacterForge site URL (HTTPS)'
+        required: true
+        type: string
+      expected_sha:
+        description: 'Exact full 40-character Git SHA expected in build-info.json'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify deployed CharacterForge artifact and backend
+        env:
+          CHARACTERFORGE_SITE_URL: ${{ inputs.site_url }}
+          CHARACTERFORGE_EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: npm run smoke:netlify
