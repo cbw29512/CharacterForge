@@ -9,6 +9,7 @@ const campaignCreateForm = document.getElementById('campaign-create-form');
 const campaignList = document.getElementById('campaign-list');
 const browseList = document.getElementById('browse-list');
 const templateList = document.getElementById('template-list');
+const characterList = document.getElementById('character-list');
 const characterForm = document.getElementById('character-create-form');
 const characterCampaign = document.getElementById('char-campaign');
 const createdCharacter = document.getElementById('created-character');
@@ -41,9 +42,11 @@ function errorMessage(error) {
     setup_complete: 'Initial setup has already been completed.',
     csrf_invalid: 'Your session security token is stale. Sign in again.',
     membership_exists: 'You already have a pending or active membership.',
+    owner_membership_required: 'The campaign owner membership cannot be removed.',
     invalid_srd_choice: 'Choose a supported race, class, background, and alignment.',
     forbidden: 'You do not have permission to perform that action.',
     service_unavailable: 'CharacterForge data service is temporarily unavailable.',
+    srd_catalog_unavailable: 'The shared SRD catalog could not be loaded.',
   };
   return messages[code] || code.replaceAll('_', ' ');
 }
@@ -108,6 +111,79 @@ function refreshCampaignSelect() {
   if ([...characterCampaign.options].some((option) => option.value === previous)) characterCampaign.value = previous;
 }
 
+function campaignOwnedByCurrentUser(campaignId) {
+  return accessibleCampaigns.some((campaign) => Number(campaign.id) === Number(campaignId) && Number(campaign.dm_id) === Number(currentUser?.id));
+}
+
+function canDeleteCharacterLocally(character) {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin') return true;
+  if (currentUser.role === 'player') return Number(character.owner_id) === Number(currentUser.id) && !character.is_npc;
+  if (currentUser.role === 'dm') {
+    if (character.campaign_id && campaignOwnedByCurrentUser(character.campaign_id)) return true;
+    return Boolean(character.is_npc) && Number(character.owner_id) === Number(currentUser.id);
+  }
+  return false;
+}
+
+async function renderCampaignMembers(campaign, card) {
+  let panel = card.querySelector('.member-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.className = 'member-panel';
+    card.append(panel);
+  }
+  panel.replaceChildren();
+  const heading = document.createElement('h3');
+  heading.textContent = 'Members';
+  panel.append(heading);
+
+  try {
+    const data = await campaignApi.members(campaign.id);
+    for (const member of data?.members || []) {
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      const identity = document.createElement('span');
+      identity.textContent = `${member.display_name || member.username} • ${member.account_role}${member.approved ? '' : ' • pending'}${member.is_owner ? ' • owner' : ''}`;
+      row.append(identity);
+
+      if (!member.approved && (currentUser.role === 'admin' || member.account_role !== 'dm')) {
+        const approve = button('Approve', 'btn btn-primary');
+        approve.addEventListener('click', async () => {
+          try {
+            await campaignApi.approve(campaign.id, member.user_id);
+            status('Member approved.', 'ok');
+            await renderCampaignMembers(campaign, card);
+          } catch (error) {
+            status(errorMessage(error), 'error');
+          }
+        });
+        row.append(approve);
+      }
+
+      if (!member.is_owner) {
+        const kick = button('Remove', 'btn');
+        kick.addEventListener('click', async () => {
+          if (!confirm(`Remove ${member.display_name || member.username} from ${campaign.name}?`)) return;
+          try {
+            await campaignApi.kick(campaign.id, member.user_id);
+            status('Member removed.', 'ok');
+            await renderCampaignMembers(campaign, card);
+          } catch (error) {
+            status(errorMessage(error), 'error');
+          }
+        });
+        row.append(kick);
+      }
+      panel.append(row);
+    }
+  } catch (error) {
+    const message = document.createElement('p');
+    message.textContent = errorMessage(error);
+    panel.append(message);
+  }
+}
+
 async function loadCampaigns() {
   campaignList.replaceChildren();
   try {
@@ -133,6 +209,8 @@ async function loadCampaigns() {
       meta.textContent = `Campaign #${campaign.id}`;
       card.append(title, description, meta);
       if (['dm', 'admin'].includes(currentUser?.role)) {
+        const members = button('Manage Members', 'btn btn-primary');
+        members.addEventListener('click', () => renderCampaignMembers(campaign, card));
         const remove = button('Delete Campaign', 'btn');
         remove.addEventListener('click', async () => {
           if (!confirm(`Delete campaign “${campaign.name}”?`)) return;
@@ -140,11 +218,12 @@ async function loadCampaigns() {
             await campaignApi.remove(campaign.id);
             status('Campaign deleted.', 'ok');
             await loadCampaigns();
+            await loadCharacters();
           } catch (error) {
             status(errorMessage(error), 'error');
           }
         });
-        card.append(remove);
+        card.append(members, remove);
       }
       campaignList.append(card);
     }
@@ -184,6 +263,66 @@ async function loadBrowse() {
       });
       card.append(title, description, join);
       browseList.append(card);
+    }
+  } catch (error) {
+    status(errorMessage(error), 'error');
+  }
+}
+
+function characterSummary(character) {
+  return `${character.race} ${character.char_class} • level ${character.level} • AC ${character.armor_class} • HP ${character.current_hp}/${character.max_hp}`;
+}
+
+async function loadCharacters() {
+  characterList.replaceChildren();
+  try {
+    const data = await characterApi.list();
+    const characters = data?.characters || [];
+    if (!characters.length) {
+      const empty = document.createElement('p');
+      empty.className = 'frontend-empty';
+      empty.textContent = 'No accessible characters yet.';
+      characterList.append(empty);
+      return;
+    }
+    for (const character of characters) {
+      const card = document.createElement('article');
+      card.className = 'frontend-card';
+      const title = document.createElement('h2');
+      title.textContent = `${character.is_npc ? 'NPC' : 'PC'} • ${character.name}`;
+      const summary = document.createElement('p');
+      summary.textContent = characterSummary(character);
+      const view = button('View Sheet', 'btn btn-primary');
+      view.addEventListener('click', async () => {
+        try {
+          const result = await characterApi.get(character.id);
+          renderCharacter(result.character);
+          createdCharacter.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (error) {
+          status(errorMessage(error), 'error');
+        }
+      });
+      card.append(title, summary, view);
+
+      if (canDeleteCharacterLocally(character)) {
+        const remove = button('Delete', 'btn');
+        remove.addEventListener('click', async () => {
+          if (!confirm(`Delete ${character.name}?`)) return;
+          try {
+            await characterApi.remove(character.id);
+            status('Character deleted.', 'ok');
+            if (!createdCharacter.hidden && createdCharacter.dataset.characterId === String(character.id)) {
+              createdCharacter.hidden = true;
+              createdCharacter.replaceChildren();
+            }
+            await loadCharacters();
+          } catch (error) {
+            status(errorMessage(error), 'error');
+          }
+        });
+        card.append(remove);
+      }
+      characterList.append(card);
     }
   } catch (error) {
     status(errorMessage(error), 'error');
@@ -270,16 +409,37 @@ function applyTemplate(template) {
   if (npc) npc.checked = Boolean(template.is_npc_template);
 }
 
+function abilityBlock(character) {
+  const dl = document.createElement('dl');
+  dl.className = 'ability-summary';
+  for (const [label, key] of [
+    ['STR', 'strength'], ['DEX', 'dexterity'], ['CON', 'constitution'],
+    ['INT', 'intelligence'], ['WIS', 'wisdom'], ['CHA', 'charisma'],
+  ]) {
+    const wrapper = document.createElement('div');
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    const score = Number(character[key] ?? 10);
+    const mod = Math.floor((score - 10) / 2);
+    dd.textContent = `${score} (${mod >= 0 ? '+' : ''}${mod})`;
+    wrapper.append(dt, dd);
+    dl.append(wrapper);
+  }
+  return dl;
+}
+
 function renderCharacter(character) {
   createdCharacter.replaceChildren();
   createdCharacter.hidden = false;
+  createdCharacter.dataset.characterId = String(character.id);
   const title = document.createElement('h2');
   title.textContent = `${character.is_npc ? 'NPC' : 'Character'}: ${character.name}`;
   const summary = document.createElement('p');
-  summary.textContent = `${character.race} ${character.char_class} • level ${character.level} • AC ${character.armor_class} • HP ${character.current_hp}/${character.max_hp}`;
+  summary.textContent = characterSummary(character);
   const mechanics = document.createElement('div');
   mechanics.className = 'frontend-meta';
-  mechanics.textContent = `Proficiency +${character.proficiency_bonus} • Hit Dice ${character.hit_dice}`;
+  mechanics.textContent = `Proficiency +${character.proficiency_bonus} • Hit Dice ${character.hit_dice} • Speed ${character.speed}`;
   const saveForm = document.createElement('form');
   saveForm.className = 'frontend-inline-form';
   const name = document.createElement('input');
@@ -305,7 +465,7 @@ function renderCharacter(character) {
       status(errorMessage(error), 'error');
     }
   });
-  createdCharacter.append(title, summary, mechanics, saveForm);
+  createdCharacter.append(title, summary, mechanics, abilityBlock(character), saveForm);
 }
 
 async function enterApp(user) {
@@ -412,6 +572,7 @@ characterForm.addEventListener('submit', async (event) => {
     const result = await characterApi.create(payload);
     renderCharacter(result.character);
     status(`${result.character.is_npc ? 'NPC' : 'Character'} forged.`, 'ok');
+    await loadCharacters();
   } catch (error) {
     status(errorMessage(error), 'error');
   }
@@ -419,6 +580,7 @@ characterForm.addEventListener('submit', async (event) => {
 
 document.getElementById('refresh-campaigns').addEventListener('click', loadCampaigns);
 document.getElementById('refresh-browse').addEventListener('click', loadBrowse);
+document.getElementById('refresh-characters').addEventListener('click', loadCharacters);
 document.getElementById('refresh-templates').addEventListener('click', loadTemplates);
 
 document.querySelectorAll('[data-view]').forEach((button) => {
@@ -431,6 +593,7 @@ document.querySelectorAll('[data-view]').forEach((button) => {
     if (target === 'characters') {
       await loadSrd();
       await loadCampaigns();
+      await loadCharacters();
     }
     if (target === 'templates') await loadTemplates();
   });
