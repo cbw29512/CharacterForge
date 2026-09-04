@@ -5,14 +5,17 @@ import { requireSession } from '../lib/guard.mts';
 import { json } from '../lib/http.mts';
 import { getPool } from '../lib/pg.mts';
 
-const CHARACTER_FIELDS = `
-  id, owner_id, campaign_id, is_npc, name, level, char_class, subclass,
-  race, background, alignment, experience_points,
-  strength, dexterity, constitution, intelligence, wisdom, charisma,
-  max_hp, current_hp, temp_hp, armor_class, initiative, speed,
-  proficiency_bonus, hit_dice, skills, saving_throws, equipment, spells,
-  features, traits, attacks, notes, build_step, build_complete, created_at, updated_at
-`;
+const CHARACTER_COLUMNS = [
+  'id', 'owner_id', 'campaign_id', 'is_npc', 'name', 'level', 'char_class', 'subclass',
+  'race', 'background', 'alignment', 'experience_points',
+  'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+  'max_hp', 'current_hp', 'temp_hp', 'armor_class', 'initiative', 'speed',
+  'proficiency_bonus', 'hit_dice', 'skills', 'saving_throws', 'equipment', 'spells',
+  'features', 'traits', 'attacks', 'notes', 'build_step', 'build_complete', 'created_at', 'updated_at',
+] as const;
+
+const CHARACTER_FIELDS = CHARACTER_COLUMNS.join(', ');
+const CHARACTER_FIELDS_WITH_ALIAS = CHARACTER_COLUMNS.map((column) => `ch.${column}`).join(', ');
 
 export default async function characters(request: Request): Promise<Response> {
   if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405, { Allow: 'GET' });
@@ -25,7 +28,7 @@ export default async function characters(request: Request): Promise<Response> {
       const result = auth.session.role === 'admin'
         ? await getPool().query(`SELECT ${CHARACTER_FIELDS} FROM characters ORDER BY updated_at DESC, id DESC`)
         : await getPool().query(
-            `SELECT ch.${CHARACTER_FIELDS.replaceAll(', ', ', ch.')}
+            `SELECT ${CHARACTER_FIELDS_WITH_ALIAS}
              FROM characters ch
              LEFT JOIN campaigns c ON c.id = ch.campaign_id
              LEFT JOIN campaign_memberships m
