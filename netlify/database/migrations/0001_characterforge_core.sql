@@ -104,4 +104,19 @@ CREATE TABLE characters (
 CREATE INDEX characters_owner_id_idx ON characters(owner_id);
 CREATE INDEX characters_campaign_id_idx ON characters(campaign_id);
 
+CREATE FUNCTION characterforge_set_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER characters_set_updated_at
+BEFORE UPDATE ON characters
+FOR EACH ROW
+EXECUTE FUNCTION characterforge_set_updated_at();
+
 COMMIT;
