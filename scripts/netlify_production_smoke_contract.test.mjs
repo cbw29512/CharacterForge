@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { execFile } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import test, { after, before } from 'node:test';
 
@@ -102,4 +103,22 @@ test('production smoke refuses implicit or malformed targets', async () => {
   }), /CHARACTERFORGE_SITE_URL is required/);
   await assert.rejects(smoke({ CHARACTERFORGE_EXPECTED_SHA: 'short' }), /full 40-character Git SHA/);
   await assert.rejects(smoke({ CHARACTERFORGE_SITE_URL: 'http://example.com' }), /site URL must use HTTPS/);
+});
+
+test('manual production smoke workflow is verification-only and cannot deploy', async () => {
+  const workflow = await readFile('.github/workflows/netlify-production-smoke.yml', 'utf8');
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /site_url:/);
+  assert.match(workflow, /expected_sha:/);
+  assert.match(workflow, /npm run smoke:netlify/);
+  for (const forbidden of [
+    'netlify deploy',
+    'netlify-cli',
+    'NETLIFY_AUTH_TOKEN',
+    'NETLIFY_SITE_ID',
+    'deploy --prod',
+    'production-deploy',
+  ]) {
+    assert.equal(workflow.toLowerCase().includes(forbidden.toLowerCase()), false, `workflow must not contain ${forbidden}`);
+  }
 });
