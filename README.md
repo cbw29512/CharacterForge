@@ -1,12 +1,12 @@
 # CharacterForge
 
-CharacterForge is a Flask-based tabletop RPG character-management and printable-sheet project focused on making character creation and campaign use easier for players and DMs.
+CharacterForge is a tabletop RPG character-management and printable-sheet project focused on making character creation and campaign use easier for players and DMs.
 
 ## Current status
 
-**Active development / pre-production.** The application includes authentication, role-based dashboards, campaigns, characters, templates, printable character sheets, and a hardened character-creation path. Production deployment should wait until the security, CI, accessibility, and deployment gates documented below are complete.
+**Public repository / hardened Flask reference implementation / not yet production-deployed.** The current Flask application has passed its security, authorization, rendered-accessibility, authenticated-browser, mobile-overflow, and printable-PDF regression gates. The next phase is a deliberate Netlify-native backend migration rather than deploying the Flask server unchanged.
 
-## Architecture
+## Current architecture
 
 - Python / Flask application factory (`app.py`)
 - Flask-SQLAlchemy persistence
@@ -31,21 +31,25 @@ FLASK_PORT=5050
 
 See `CharacterForge_SETUP_GUIDE.md` for the current Windows-oriented setup notes.
 
-## Production Definition of Done
+## Quality gate
 
-CharacterForge is ready for public production only when all of the following are green:
+The hardened Flask implementation currently verifies:
 
-- No default or committed production credentials/secrets
-- Dependency and secret scanning
-- Automated unit/integration tests
-- Authentication and authorization regression tests
-- WCAG accessibility checks
-- Mobile and desktop production smoke tests
-- Printable-sheet regression tests
-- Security-header verification
-- Production database configuration separated from local development
-- Documented backup/recovery path for persistent data
-- Netlify-compatible deployment architecture confirmed before production cutover
+- no default or committed production credentials
+- strict session-secret configuration
+- authentication and authorization regression coverage
+- CSRF/session/security-header behavior
+- 29 Python/security regression tests
+- rendered WCAG checks for setup, login, role dashboards, campaigns, builder, and character sheet
+- authenticated Chromium desktop/mobile smoke
+- 390px horizontal-overflow regression
+- Letter-size printable-sheet PDF generation and parsed-PDF validation
+
+## Netlify production direction
+
+Netlify's current native Functions runtime does not run Python/Flask applications directly. CharacterForge therefore will not use a fake Flask-on-Netlify wrapper. The planned production direction is a Netlify-native API/runtime with Netlify Database (Postgres), while preserving the proven domain rules and UI behavior from this Flask implementation.
+
+See `docs/NETLIFY_MIGRATION.md` for the migration Definition of Done, state model, boundaries, and sequencing.
 
 ## Safety and rules boundary
 
@@ -59,4 +63,4 @@ If CharacterForge is useful to your table, you can support continued development
 
 ## Repository hygiene
 
-Several PowerShell files in the repository are historical setup/patch tooling from earlier development. They are being audited before consolidation or archival so working behavior is not removed accidentally.
+Historical root patch generators, machine-specific installers, timestamped backups, and stale embedded-secret/debug setup artifacts have been removed from the current tree. Git history still preserves prior development history.
