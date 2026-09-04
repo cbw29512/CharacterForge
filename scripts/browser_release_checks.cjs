@@ -1,10 +1,12 @@
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 const puppeteer = require('puppeteer');
 
 const baseUrl = process.env.CI_BASE_URL || 'http://127.0.0.1:5050';
 const username = process.env.CI_PLAYER_USERNAME;
 const password = process.env.CI_PLAYER_PASSWORD;
 const characterId = process.env.CI_CHARACTER_ID;
+const pdfPath = '/tmp/characterforge-sheet.pdf';
 
 if (!username || !password || !characterId) {
   throw new Error('CI_PLAYER_USERNAME, CI_PLAYER_PASSWORD, and CI_CHARACTER_ID are required');
@@ -34,6 +36,28 @@ async function assertNoViewportOverflow(page, label) {
   }
 }
 
+function validatePdf(path) {
+  const validator = String.raw`
+import sys
+from pypdf import PdfReader
+
+path = sys.argv[1]
+reader = PdfReader(path)
+pages = len(reader.pages)
+if pages < 1 or pages > 3:
+    raise SystemExit(f"Unexpected character PDF page count: {pages}")
+text = "\n".join((page.extract_text() or "") for page in reader.pages)
+for required in ("A11y Test Fighter", "Armor Class", "Skills"):
+    if required not in text:
+        raise SystemExit(f"Generated PDF is missing expected text: {required}")
+print(pages)
+`;
+  const output = execFileSync('python', ['-c', validator, path], { encoding: 'utf8' }).trim();
+  const pages = Number(output.split(/\s+/).pop());
+  if (!Number.isInteger(pages)) throw new Error(`Could not parse PDF page count from validator output: ${output}`);
+  return pages;
+}
+
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   try {
@@ -50,10 +74,9 @@ async function assertNoViewportOverflow(page, label) {
 
     await page.emulateMediaType('print');
     const pdf = await page.pdf({ format: 'Letter', printBackground: true, preferCSSPageSize: true });
-    fs.writeFileSync('/tmp/characterforge-sheet.pdf', pdf);
+    fs.writeFileSync(pdfPath, pdf);
     if (pdf.length < 15000) throw new Error(`Generated character PDF is unexpectedly small: ${pdf.length} bytes`);
-    const pageCount = (pdf.toString('latin1').match(/\/Type\s*\/Page\b/g) || []).length;
-    if (pageCount < 1 || pageCount > 3) throw new Error(`Unexpected character PDF page count: ${pageCount}`);
+    const pageCount = validatePdf(pdfPath);
 
     await page.emulateMediaType('screen');
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
