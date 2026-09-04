@@ -1,0 +1,56 @@
+name: CharacterForge Netlify Schema
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'netlify/database/migrations/**'
+      - 'netlify/functions/**'
+      - 'scripts/netlify_db_contract.test.mjs'
+      - 'scripts/netlify_health_contract.test.mjs'
+      - 'tests/test_netlify_schema_contract.py'
+      - '.github/workflows/netlify-schema.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'netlify/database/migrations/**'
+      - 'netlify/functions/**'
+      - 'scripts/netlify_db_contract.test.mjs'
+      - 'scripts/netlify_health_contract.test.mjs'
+      - 'tests/test_netlify_schema_contract.py'
+      - '.github/workflows/netlify-schema.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Static schema contract
+        run: python -m unittest tests.test_netlify_schema_contract -v
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pinned Netlify runtime and database test dependencies
+        run: npm install --no-save @netlify/database@2.0.0 @netlify/functions@6.0.0 @netlify/database-dev@1.0.1 pg@8.23.0
+
+      - name: Apply migration to local Netlify Postgres and exercise constraints
+        run: node --test scripts/netlify_db_contract.test.mjs
+
+      - name: Exercise read-only health function against local Netlify Postgres
+        run: node --test scripts/netlify_health_contract.test.mjs

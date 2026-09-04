@@ -1,0 +1,21 @@
+{
+  "name": "characterforge-netlify",
+  "private": true,
+  "version": "0.0.0-migration",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "test:netlify-db": "node --test scripts/netlify_db_contract.test.mjs",
+    "test:netlify-health": "node --test scripts/netlify_health_contract.test.mjs"
+  },
+  "dependencies": {
+    "@netlify/database": "2.0.0",
+    "@netlify/functions": "6.0.0"
+  },
+  "devDependencies": {
+    "@netlify/database-dev": "1.0.1",
+    "pg": "8.23.0"
+  }
+}
