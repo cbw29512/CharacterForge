@@ -34,7 +34,11 @@ function characterCard(character) {
   meta.textContent = `Level ${character.level} ${character.race || ''} ${character.char_class || ''}`.replace(/\s+/g, ' ').trim();
   const stats = document.createElement('p');
   stats.textContent = `AC ${character.armor_class} · HP ${character.current_hp}/${character.max_hp}`;
-  article.append(heading, meta, stats);
+  const link = document.createElement('a');
+  link.className = 'btn';
+  link.href = `/character?id=${encodeURIComponent(character.id)}`;
+  link.textContent = 'Open sheet';
+  article.append(heading, meta, stats, link);
   return article;
 }
 
@@ -85,16 +89,23 @@ function render(data) {
   campaignData = data;
   campaignTitle.textContent = data.campaign.name;
   campaignDescription.textContent = data.campaign.description || 'No description.';
-  pcs.replaceChildren(...(data.pc_characters.length ? data.pc_characters.map(characterCard) : [emptyMessage('No player characters yet.') ]));
-  npcs.replaceChildren(...(data.npc_characters.length ? data.npc_characters.map(characterCard) : [emptyMessage('No NPCs yet.') ]));
+  pcs.replaceChildren(...(data.pc_characters.length ? data.pc_characters.map(characterCard) : [emptyMessage('No player characters yet.')]));
+  npcs.replaceChildren(...(data.npc_characters.length ? data.npc_characters.map(characterCard) : [emptyMessage('No NPCs yet.')]));
+
+  const createPc = document.querySelector('#create-pc');
+  const createNpc = document.querySelector('#create-npc');
+  const deleteCampaign = document.querySelector('#delete-campaign');
+  createPc.hidden = !data.can_create_pc;
+  createNpc.hidden = !data.can_create_npc;
+  deleteCampaign.hidden = !data.is_dm;
+  createPc.href = `/character-new?campaign_id=${encodeURIComponent(campaignId)}`;
+  createNpc.href = `/character-new?campaign_id=${encodeURIComponent(campaignId)}&npc=true`;
 
   const management = document.querySelector('#management');
-  const managerActions = document.querySelector('#manager-actions');
   management.hidden = !data.is_dm;
-  managerActions.hidden = !data.is_dm;
   if (data.is_dm) {
-    pending.replaceChildren(...(data.pending.length ? data.pending.map((row) => memberCard(row, { pendingRequest: true })) : [emptyMessage('No pending requests.') ]));
-    members.replaceChildren(...(data.members.length ? data.members.map((row) => memberCard(row)) : [emptyMessage('No approved members.') ]));
+    pending.replaceChildren(...(data.pending.length ? data.pending.map((row) => memberCard(row, { pendingRequest: true })) : [emptyMessage('No pending requests.')]));
+    members.replaceChildren(...(data.members.length ? data.members.map((row) => memberCard(row)) : [emptyMessage('No approved members.')]));
   }
 }
 
