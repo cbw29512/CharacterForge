@@ -20,7 +20,17 @@ class NetlifyOperationalContractTests(unittest.TestCase):
             for path in sorted(WORKFLOWS.glob("*.yml"))
         )
         self.assertNotRegex(workflow_text, r"(?m)^\s*NETLIFY_DB_URL\s*:")
-        self.assertNotRegex(workflow_text, r"(?m)^\s*DATABASE_URL\s*:")
+
+        database_lines = [
+            line.strip()
+            for line in workflow_text.splitlines()
+            if re.match(r"^DATABASE_URL\s*:", line.strip())
+        ]
+        self.assertTrue(database_lines, "expected the isolated Flask CI DATABASE_URL fixture")
+        self.assertEqual(
+            database_lines,
+            ["DATABASE_URL: sqlite:////tmp/characterforge-ci.sqlite3"],
+        )
 
     def test_database_connection_fails_closed_without_platform_url(self):
         pg = (ROOT / "netlify" / "lib" / "pg.mts").read_text(encoding="utf-8")
