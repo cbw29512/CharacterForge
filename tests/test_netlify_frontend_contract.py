@@ -19,13 +19,13 @@ class NetlifyFrontendContractTests(unittest.TestCase):
         self.assertIn("object-src 'none'", config)
         self.assertIn("frame-ancestors 'none'", config)
         self.assertIn('Permissions-Policy', config)
-        for route in ('/character', '/character-new', '/templates'):
+        for route in ('/admin', '/character', '/character-new', '/templates'):
             self.assertIn(f'from = "{route}"', config)
 
     def test_static_pages_use_only_local_runtime_assets(self):
         for name in (
-            "index.html", "login.html", "setup.html", "app.html", "campaign.html",
-            "character.html", "character-new.html", "templates.html",
+            "index.html", "login.html", "setup.html", "app.html", "admin.html",
+            "campaign.html", "character.html", "character-new.html", "templates.html",
         ):
             html = (SITE / name).read_text(encoding="utf-8")
             self.assertNotIn("https://fonts.", html, name)
@@ -45,10 +45,11 @@ class NetlifyFrontendContractTests(unittest.TestCase):
         self.assertNotIn("innerHTML", js)
         self.assertNotIn("insertAdjacentHTML", js)
 
-    def test_expected_auth_campaign_character_and_template_api_routes_are_wired(self):
+    def test_expected_api_routes_are_wired(self):
         login = (SITE / "assets" / "login.js").read_text(encoding="utf-8")
         setup = (SITE / "assets" / "setup.js").read_text(encoding="utf-8")
         app = (SITE / "assets" / "app.js").read_text(encoding="utf-8")
+        admin = (SITE / "assets" / "admin.js").read_text(encoding="utf-8")
         campaign = (SITE / "assets" / "campaign.js").read_text(encoding="utf-8")
         character = (SITE / "assets" / "character.js").read_text(encoding="utf-8")
         builder = (SITE / "assets" / "character-new.js").read_text(encoding="utf-8")
@@ -60,6 +61,11 @@ class NetlifyFrontendContractTests(unittest.TestCase):
         self.assertIn("/api/auth/logout", session)
         for route in ("/api/campaigns", "/api/campaigns/browse", "/api/campaigns/join"):
             self.assertIn(route, app)
+        for route in (
+            "/api/admin/overview", "/api/admin/users/create", "/api/admin/users/role",
+            "/api/admin/users/password", "/api/admin/users/delete", "/api/campaigns/delete",
+        ):
+            self.assertIn(route, admin)
         for route in ("/api/campaigns/view", "/api/campaigns/approve", "/api/campaigns/kick", "/api/campaigns/delete"):
             self.assertIn(route, campaign)
         self.assertIn("/api/characters?id=", character)
@@ -71,9 +77,13 @@ class NetlifyFrontendContractTests(unittest.TestCase):
         self.assertIn("/api/templates?npc=", templates)
         self.assertIn("/api/templates/delete", templates)
 
-    def test_character_and_campaign_controls_consume_server_capabilities(self):
+    def test_character_campaign_and_admin_controls_use_server_authorization(self):
+        app = (SITE / "assets" / "app.js").read_text(encoding="utf-8")
+        admin = (SITE / "assets" / "admin.js").read_text(encoding="utf-8")
         campaign = (SITE / "assets" / "campaign.js").read_text(encoding="utf-8")
         character = (SITE / "assets" / "character.js").read_text(encoding="utf-8")
+        self.assertIn("currentUser.role === 'admin'", app)
+        self.assertIn("currentUser.role !== 'admin'", admin)
         self.assertIn("data.can_create_pc", campaign)
         self.assertIn("data.can_create_npc", campaign)
         self.assertIn("member.is_owner", campaign)
