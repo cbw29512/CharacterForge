@@ -1,6 +1,7 @@
 import type { Config } from '@netlify/functions';
 
 import { canAccessCampaign, canManageCampaign } from '../lib/campaign-access.mts';
+import { canCreateInCampaign } from '../lib/character-access.mts';
 import { requireSession } from '../lib/guard.mts';
 import { json } from '../lib/http.mts';
 import { getPool } from '../lib/pg.mts';
@@ -24,6 +25,8 @@ export default async function campaignView(request: Request): Promise<Response> 
     if (!(await canAccessCampaign(auth.session, campaignId))) return json({ error: 'forbidden' }, 403);
 
     const isDm = await canManageCampaign(auth.session, campaignId);
+    const canCreatePc = await canCreateInCampaign(auth.session, campaignId, false);
+    const canCreateNpc = await canCreateInCampaign(auth.session, campaignId, true);
     const characterResult = await getPool().query(
       `SELECT id, owner_id, campaign_id, is_npc, name, level, char_class, race,
               armor_class, current_hp, max_hp, build_complete
@@ -55,6 +58,8 @@ export default async function campaignView(request: Request): Promise<Response> 
     return json({
       campaign,
       is_dm: isDm,
+      can_create_pc: canCreatePc,
+      can_create_npc: canCreateNpc,
       pc_characters: pcCharacters,
       npc_characters: npcCharacters,
       members,
