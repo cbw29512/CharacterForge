@@ -8,8 +8,11 @@ on:
       - 'package.json'
       - 'scripts/write_netlify_build_info.mjs'
       - 'scripts/netlify_build_info_contract.test.mjs'
+      - 'scripts/netlify_production_smoke.mjs'
+      - 'scripts/netlify_production_smoke_contract.test.mjs'
       - 'tests/test_netlify_frontend_contract.py'
       - '.github/workflows/netlify-frontend.yml'
+      - '.github/workflows/netlify-production-smoke.yml'
   push:
     branches: [main]
     paths:
@@ -18,8 +21,11 @@ on:
       - 'package.json'
       - 'scripts/write_netlify_build_info.mjs'
       - 'scripts/netlify_build_info_contract.test.mjs'
+      - 'scripts/netlify_production_smoke.mjs'
+      - 'scripts/netlify_production_smoke_contract.test.mjs'
       - 'tests/test_netlify_frontend_contract.py'
       - '.github/workflows/netlify-frontend.yml'
+      - '.github/workflows/netlify-production-smoke.yml'
   workflow_dispatch:
 
 permissions:
@@ -44,6 +50,8 @@ jobs:
           node-version: '24'
       - name: Verify build provenance contract
         run: node --test scripts/netlify_build_info_contract.test.mjs
+      - name: Verify production smoke checker contract
+        run: node --test scripts/netlify_production_smoke_contract.test.mjs
       - name: Generate exact CI build metadata
         run: COMMIT_REF="$GITHUB_SHA" BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" CONTEXT="ci" npm run build:netlify
       - name: Install accessibility tooling
