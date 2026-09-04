@@ -111,6 +111,7 @@ wireLogout();
   try {
     currentUser = await requireUser();
     if (!currentUser) return;
+    if (currentUser.role === 'admin') document.querySelector('#admin-link').hidden = false;
     if (currentUser.role === 'player') {
       document.querySelector('#browse-section').hidden = false;
       await loadBrowse();
