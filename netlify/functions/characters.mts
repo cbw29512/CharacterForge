@@ -5,23 +5,47 @@ import { requireSession } from '../lib/guard.mts';
 import { json } from '../lib/http.mts';
 import { getPool } from '../lib/pg.mts';
 
+const CHARACTER_FIELDS = `
+  id, owner_id, campaign_id, is_npc, name, level, char_class, subclass,
+  race, background, alignment, experience_points,
+  strength, dexterity, constitution, intelligence, wisdom, charisma,
+  max_hp, current_hp, temp_hp, armor_class, initiative, speed,
+  proficiency_bonus, hit_dice, skills, saving_throws, equipment, spells,
+  features, traits, attacks, notes, build_step, build_complete, created_at, updated_at
+`;
+
 export default async function characters(request: Request): Promise<Response> {
   if (request.method !== 'GET') return json({ error: 'method_not_allowed' }, 405, { Allow: 'GET' });
   const auth = await requireSession(request);
   if (auth.response) return auth.response;
 
-  const id = Number(new URL(request.url).searchParams.get('id'));
-  if (!Number.isSafeInteger(id) || id <= 0) return json({ error: 'invalid_input' }, 400);
-
+  const rawId = new URL(request.url).searchParams.get('id');
   try {
+    if (rawId === null) {
+      const result = auth.session.role === 'admin'
+        ? await getPool().query(`SELECT ${CHARACTER_FIELDS} FROM characters ORDER BY updated_at DESC, id DESC`)
+        : await getPool().query(
+            `SELECT ch.${CHARACTER_FIELDS.replaceAll(', ', ', ch.')}
+             FROM characters ch
+             LEFT JOIN campaigns c ON c.id = ch.campaign_id
+             LEFT JOIN campaign_memberships m
+               ON m.campaign_id = ch.campaign_id
+              AND m.user_id = $1
+              AND m.approved = TRUE
+             WHERE ch.owner_id = $1
+                OR c.dm_id = $1
+                OR m.id IS NOT NULL
+             ORDER BY ch.updated_at DESC, ch.id DESC`,
+            [auth.session.id],
+          );
+      return json({ characters: result.rows });
+    }
+
+    const id = Number(rawId);
+    if (!Number.isSafeInteger(id) || id <= 0) return json({ error: 'invalid_input' }, 400);
+
     const result = await getPool().query(
-      `SELECT
-         id, owner_id, campaign_id, is_npc, name, level, char_class, subclass,
-         race, background, alignment, experience_points,
-         strength, dexterity, constitution, intelligence, wisdom, charisma,
-         max_hp, current_hp, temp_hp, armor_class, initiative, speed,
-         proficiency_bonus, hit_dice, skills, saving_throws, equipment, spells,
-         features, traits, attacks, notes, build_step, build_complete, created_at, updated_at
+      `SELECT ${CHARACTER_FIELDS}
        FROM characters
        WHERE id = $1
        LIMIT 1`,
