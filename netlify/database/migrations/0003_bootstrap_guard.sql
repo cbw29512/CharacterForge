@@ -6,4 +6,9 @@ CREATE TABLE bootstrap_guards (
     CHECK (key IN ('first_admin'))
 );
 
+INSERT INTO bootstrap_guards (key)
+SELECT 'first_admin'
+WHERE EXISTS (SELECT 1 FROM users WHERE role = 'admin')
+ON CONFLICT (key) DO NOTHING;
+
 COMMIT;
