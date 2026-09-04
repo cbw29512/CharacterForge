@@ -11,6 +11,8 @@ on:
       - 'scripts/netlify_production_smoke.mjs'
       - 'scripts/netlify_production_smoke_contract.test.mjs'
       - 'tests/test_netlify_frontend_contract.py'
+      - 'tests/test_netlify_production_smoke_contract.py'
+      - 'docs/NETLIFY_PRODUCTION_SMOKE.md'
       - '.github/workflows/netlify-frontend.yml'
       - '.github/workflows/netlify-production-smoke.yml'
   push:
@@ -24,6 +26,8 @@ on:
       - 'scripts/netlify_production_smoke.mjs'
       - 'scripts/netlify_production_smoke_contract.test.mjs'
       - 'tests/test_netlify_frontend_contract.py'
+      - 'tests/test_netlify_production_smoke_contract.py'
+      - 'docs/NETLIFY_PRODUCTION_SMOKE.md'
       - '.github/workflows/netlify-frontend.yml'
       - '.github/workflows/netlify-production-smoke.yml'
   workflow_dispatch:
@@ -44,6 +48,8 @@ jobs:
           python-version: '3.12'
       - name: Static frontend security contract
         run: python -m unittest tests.test_netlify_frontend_contract -v
+      - name: Static production smoke workflow contract
+        run: python -m unittest tests.test_netlify_production_smoke_contract -v
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
