@@ -7,6 +7,7 @@ const pages = [
   '/login.html',
   '/setup.html',
   '/app.html',
+  '/admin.html',
   '/campaign.html?id=1',
   '/character.html?id=1',
   '/character-new.html?campaign_id=1',
