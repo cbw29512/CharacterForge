@@ -6,7 +6,8 @@
     "check": "tsc --noEmit && node tests/schema-contract.mjs"
   },
   "devDependencies": {
-    "@netlify/functions": "^4.2.5",
+    "@netlify/functions": "^6.0.0",
+    "@types/node": "^24.1.0",
     "typescript": "^5.9.2"
   }
 }
