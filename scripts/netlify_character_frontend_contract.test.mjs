@@ -88,13 +88,19 @@ test('canonical SRD endpoint exposes builder choices from shared catalog', async
   assert.equal(body.alignments.includes('True Neutral'), true);
 });
 
-test('character read returns server-authorized delete capability', async () => {
-  const expected = { owner: true, member: false, dm: true, admin: true };
-  for (const [key, canDelete] of Object.entries(expected)) {
+test('character read returns server-authorized delete and template-save capabilities', async () => {
+  const expected = {
+    owner: { canDelete: true, canSave: true },
+    member: { canDelete: false, canSave: false },
+    dm: { canDelete: true, canSave: true },
+    admin: { canDelete: true, canSave: true },
+  };
+  for (const [key, capability] of Object.entries(expected)) {
     const response = await readCharacter(requestFor(key, `/api/characters?id=${characterId}`));
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.character.id, characterId);
-    assert.equal(body.can_delete, canDelete, key);
+    assert.equal(body.can_delete, capability.canDelete, `${key}:delete`);
+    assert.equal(body.can_save_template, capability.canSave, `${key}:template`);
   }
 });

@@ -39,6 +39,7 @@ export function messageFor(error){
     password_mismatch:'The password confirmation does not match.',
     username_unavailable:'That username is unavailable.',
     membership_exists:'You already have a pending or active membership for that campaign.',
+    template_name_exists:'You already have a template with that name.',
     forbidden:'Your account is not allowed to perform that action.',
     not_found:'That item is no longer available.',
     invalid_input:'Check the form values and try again.',

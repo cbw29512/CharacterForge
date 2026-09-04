@@ -81,6 +81,7 @@ function render(data) {
   for (const [key, value] of Object.entries(character.traits || {})) addDefinition(traits, key.replaceAll('_', ' '), value || '—');
   document.querySelector('#notes').textContent = character.notes || 'No notes.';
   document.querySelector('#delete-character').hidden = !data.can_delete;
+  document.querySelector('#save-template-section').hidden = !data.can_save_template;
 }
 
 async function loadCharacter() {
@@ -98,6 +99,24 @@ async function loadCharacter() {
     showStatus(messageFor(error), 'error');
   }
 }
+
+document.querySelector('#save-template-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!characterData) return;
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  try {
+    await api('/api/templates/save', {
+      method: 'POST',
+      body: { character_id: characterId, name: data.get('name'), description: data.get('description') },
+      csrf: true,
+    });
+    form.reset();
+    showStatus('Template saved to your library.', 'ok');
+  } catch (error) {
+    showStatus(messageFor(error), 'error');
+  }
+});
 
 document.querySelector('#delete-character').addEventListener('click', async () => {
   if (!characterData) return;
