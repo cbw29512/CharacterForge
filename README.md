@@ -4,16 +4,47 @@ CharacterForge is a tabletop RPG character-management and printable-sheet projec
 
 ## Current status
 
-**Public repository / hardened Flask reference implementation / not yet production-deployed.** The current Flask application has passed its security, authorization, rendered-accessibility, authenticated-browser, mobile-overflow, and printable-PDF regression gates. The next phase is a deliberate Netlify-native backend migration rather than deploying the Flask server unchanged.
+**Public repository / hardened Flask reference / Netlify-native migration substantially implemented / not yet production-deployed.**
+
+The Flask application remains the behavioral reference and continues to pass security, authorization, rendered-accessibility, authenticated-browser, 390px mobile-overflow, and printable-PDF regression gates.
+
+The Netlify migration now includes:
+
+- versioned Postgres schema and repeatable migrations
+- durable opaque server-side sessions
+- first-admin bootstrap, login, session restore, and POST logout
+- CSRF-protected state-changing APIs
+- protected campaign, membership, character, SRD, and template operations
+- modular static Netlify frontend for auth, campaigns, characters, and templates
+- server-authorized UI capability flags
+- strict production security headers and CSP
+- exact build provenance through `/build-info.json`
+- manual-only production smoke verification for deployed SHA, security headers, and database/schema health
+- eight-page static WCAG coverage
+- browser-backed 390px overflow regression across all eight static pages
+- browser-backed Letter-print/PDF regression for the Netlify character sheet
+
+No Netlify production site or database has been deliberately provisioned or promoted yet. Production deployment remains an explicit cutover step after the remaining operational readiness work is complete.
 
 ## Current architecture
+
+### Flask reference
 
 - Python / Flask application factory (`app.py`)
 - Flask-SQLAlchemy persistence
 - Flask-Session server-side sessions
 - Blueprints for auth, admin, DM, player, campaigns, characters, and templates
-- Optional Ollama integration for local AI-assisted features
-- Printable character sheets
+- optional Ollama integration for local AI-assisted features
+- printable character sheets
+
+### Netlify target
+
+- static frontend under `site/`
+- Netlify Functions under `netlify/functions/`
+- Netlify Database / Postgres migrations under `netlify/database/migrations/`
+- opaque server-side sessions with secure cookies
+- shared SRD catalog and parity contracts
+- exact build provenance and explicit-only production smoke verification
 
 ## Local development
 
@@ -29,27 +60,52 @@ FLASK_ENV=development
 FLASK_PORT=5050
 ```
 
-See `CharacterForge_SETUP_GUIDE.md` for the current Windows-oriented setup notes.
+See `CharacterForge_SETUP_GUIDE.md` for the current Windows-oriented Flask setup notes.
 
-## Quality gate
+## Quality gates
 
-The hardened Flask implementation currently verifies:
+The repository verifies both the Flask reference and the Netlify-native migration.
+
+### Flask reference gate
 
 - no default or committed production credentials
 - strict session-secret configuration
 - authentication and authorization regression coverage
 - CSRF/session/security-header behavior
-- 29 Python/security regression tests
 - rendered WCAG checks for setup, login, role dashboards, campaigns, builder, and character sheet
 - authenticated Chromium desktop/mobile smoke
 - 390px horizontal-overflow regression
 - Letter-size printable-sheet PDF generation and parsed-PDF validation
 
+### Netlify migration gates
+
+- versioned Postgres schema constraints and migrations
+- auth/session/CSRF lifecycle contracts
+- campaign ownership and membership authorization
+- campaign-owner membership immutability
+- character read/create/delete authorization
+- shared SRD parity and character-creation math
+- template ownership and lifecycle authorization
+- static frontend security contract
+- eight-page static WCAG audit
+- browser-backed 390px no-overflow regression
+- browser-backed Letter character-sheet print/PDF regression
+- exact CI/deploy build provenance
+- production-smoke verifier self-tests
+- secret-history scan
+
 ## Netlify production direction
 
-Netlify's current native Functions runtime does not run Python/Flask applications directly. CharacterForge therefore will not use a fake Flask-on-Netlify wrapper. The planned production direction is a Netlify-native API/runtime with Netlify Database (Postgres), while preserving the proven domain rules and UI behavior from this Flask implementation.
+CharacterForge is being moved to a Netlify-native frontend, Functions runtime, and Postgres database rather than wrapping the Flask application in a fake Netlify deployment.
 
-See `docs/NETLIFY_MIGRATION.md` for the migration Definition of Done, state model, boundaries, and sequencing.
+The remaining major work before deliberate production cutover is now primarily operational and administrative: admin/user-management parity beyond first-admin bootstrap, backup/restore procedure, preview-versus-production database isolation, production secrets/resource configuration, and the first intentional Netlify deployment plus manual smoke verification.
+
+See:
+
+- `docs/NETLIFY_MIGRATION.md` — migration Definition of Done and sequencing
+- `docs/NETLIFY_PRODUCTION_READINESS.md` — production readiness criteria
+- `docs/NETLIFY_DEPLOY_CHECKLIST.md` — deliberate deployment checklist
+- `docs/NETLIFY_PRODUCTION_SMOKE.md` — exact deployed-SHA verification procedure
 
 ## Safety and rules boundary
 
