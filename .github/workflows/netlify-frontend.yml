@@ -10,6 +10,7 @@ on:
       - 'scripts/netlify_build_info_contract.test.mjs'
       - 'scripts/netlify_production_smoke.mjs'
       - 'scripts/netlify_production_smoke_contract.test.mjs'
+      - 'scripts/netlify_static_browser_contract.mjs'
       - 'tests/test_netlify_frontend_contract.py'
       - 'tests/test_netlify_production_smoke_contract.py'
       - 'docs/NETLIFY_PRODUCTION_SMOKE.md'
@@ -25,6 +26,7 @@ on:
       - 'scripts/netlify_build_info_contract.test.mjs'
       - 'scripts/netlify_production_smoke.mjs'
       - 'scripts/netlify_production_smoke_contract.test.mjs'
+      - 'scripts/netlify_static_browser_contract.mjs'
       - 'tests/test_netlify_frontend_contract.py'
       - 'tests/test_netlify_production_smoke_contract.py'
       - 'docs/NETLIFY_PRODUCTION_SMOKE.md'
@@ -38,7 +40,7 @@ permissions:
 jobs:
   frontend-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,8 +62,8 @@ jobs:
         run: node --test scripts/netlify_production_smoke_contract.test.mjs
       - name: Generate exact CI build metadata
         run: COMMIT_REF="$GITHUB_SHA" BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" CONTEXT="ci" npm run build:netlify
-      - name: Install accessibility tooling
-        run: npm install --no-save pa11y@10.0.0
+      - name: Install pinned browser and accessibility tooling
+        run: npm install --no-save pa11y@10.0.0 puppeteer@25.10.0
       - name: Start static site
         run: |
           python -m http.server 4174 --directory site > /tmp/cf-static.log 2>&1 &
@@ -74,6 +76,8 @@ jobs:
       - name: Verify served build provenance
         run: |
           node -e "fetch('http://127.0.0.1:4174/build-info.json').then(r=>r.json()).then(v=>{if(v.commit!==process.env.GITHUB_SHA||v.context!=='ci')process.exit(1);console.log(v)})"
+      - name: Browser 390px overflow and Letter print regression
+        run: node scripts/netlify_static_browser_contract.mjs
       - name: WCAG audit static frontend
         run: |
           npx pa11y --config .pa11y.json http://127.0.0.1:4174/index.html
