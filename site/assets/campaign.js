@@ -50,7 +50,7 @@ function memberCard(member, { pendingRequest = false } = {}) {
   heading.textContent = member.display_name || member.username;
   const meta = document.createElement('span');
   meta.className = 'muted';
-  meta.textContent = ` ${member.username} · ${member.user_role}`;
+  meta.textContent = ` ${member.username} · ${member.user_role}${member.is_owner ? ' · owner' : ''}`;
   info.append(heading, meta);
   article.append(info);
 
@@ -64,7 +64,7 @@ function memberCard(member, { pendingRequest = false } = {}) {
     approve.addEventListener('click', () => manageMember('/api/campaigns/approve', member.user_id));
     actions.append(approve);
   }
-  if (member.membership_role !== 'dm') {
+  if (!member.is_owner) {
     const kick = document.createElement('button');
     kick.type = 'button';
     kick.className = 'btn danger';
