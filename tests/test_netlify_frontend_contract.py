@@ -49,7 +49,7 @@ class NetlifyFrontendContractTests(unittest.TestCase):
         login = (SITE / "assets" / "login.js").read_text(encoding="utf-8")
         setup = (SITE / "assets" / "setup.js").read_text(encoding="utf-8")
         app = (SITE / "assets" / "app.js").read_text(encoding="utf-8")
-        admin = (SITE / "assets" / "admin.js").read_text(encoding="utf-8")
+        admin = "\n".join((SITE / "assets" / name).read_text(encoding="utf-8") for name in ("admin.js", "admin-cards.js"))
         campaign = (SITE / "assets" / "campaign.js").read_text(encoding="utf-8")
         character = (SITE / "assets" / "character.js").read_text(encoding="utf-8")
         builder = (SITE / "assets" / "character-new.js").read_text(encoding="utf-8")
