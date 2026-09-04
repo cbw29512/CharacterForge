@@ -24,11 +24,11 @@ CharacterForge stays pre-production until every required gate below is green.
 - [x] Remove tracked timestamped dependency/wizard backups and ignore `*.bak.*`
 - [x] Add rendered Pa11y WCAG CI for first-launch setup and login
 - [x] Raise the shared muted-text contrast token after the first rendered WCAG findings
+- [x] First-launch setup and login pass rendered WCAG 2 AA on run #36 at `45d4364...`
 - [x] Improve admin form labels, table headers, modal semantics, and password-policy text
 
 ## Still required before public production
 
-- [ ] Get the current rendered WCAG setup/login run fully green
 - [ ] Extend browser WCAG checks to authenticated dashboards, builder, campaigns, and character sheets
 - [ ] Add mobile/desktop browser smoke and performance checks
 - [ ] Add a browser-level print/PDF regression in addition to the source-level print contract
