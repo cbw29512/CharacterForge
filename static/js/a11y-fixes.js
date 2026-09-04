@@ -56,7 +56,39 @@
     });
   }
 
+  function hardenCharacterBuilder() {
+    if (!/^\/characters\/(new|create)/.test(window.location.pathname)) return;
+
+    const byId = {
+      "field-name": "Character name",
+      "field-level": "Character level",
+      "field-alignment": "Character alignment",
+      "score-strength": "Strength score",
+      "score-dexterity": "Dexterity score",
+      "score-constitution": "Constitution score",
+      "score-intelligence": "Intelligence score",
+      "score-wisdom": "Wisdom score",
+      "score-charisma": "Charisma score",
+      "field-personality_trait": "Personality trait",
+      "field-ideal": "Ideal",
+      "field-bond": "Bond",
+      "field-flaw": "Flaw",
+      "field-notes": "Character notes"
+    };
+
+    Object.entries(byId).forEach(function ([id, label]) {
+      setAccessibleName(document.getElementById(id), label);
+    });
+
+    document.querySelectorAll(".ai-input").forEach(function (input, index) {
+      const placeholder = (input.getAttribute("placeholder") || "").replace(/\.{3}$/, "").trim();
+      const label = placeholder ? "AI helper: " + placeholder : "AI helper question " + (index + 1);
+      setAccessibleName(input, label);
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     hardenQuickNpcModal();
+    hardenCharacterBuilder();
   });
 })();
