@@ -90,6 +90,10 @@ FLASK_PORT=5050
 
 See `CharacterForge_SETUP_GUIDE.md` for the current Windows-oriented Flask setup notes.
 
+## Teaching-first optimization
+
+CharacterForge must explain optimized choices rather than presenting unexplained numbers. Guided, Explained, and Expert views use the same legal audited character; explanation depth changes, not the build rules. See `docs/TEACHING_OPTIMIZATION_STANDARD.md`.
+
 ## Safety and rules boundary
 
 CharacterForge is a tabletop gaming utility. Rules data and generated content should be reviewed by the DM/player before use. The project should avoid representing unofficial or generated material as official rules text.
